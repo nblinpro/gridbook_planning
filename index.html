@@ -1,541 +1,832 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motorsport Racing - Gridbook Project & Gantt Management</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-        .gh-btn-red { background-color: #da3633; color: #ffffff; }
-        .gh-btn-red:hover { background-color: #b62324; }
-        .gh-btn-green { background-color: #238636; color: #ffffff; }
-        .gh-btn-green:hover { background-color: #2ea043; }
-        .gh-border { border-color: #30363d; }
-        .gh-card { background-color: #161b22; border: 1px solid #30363d; }
-        .gh-input { background-color: #0d1117; border: 1px solid #30363d; color: #c9d1d9; }
-        .gh-input:focus { border-color: #58a6ff; outline: none; box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pit Wall — Préparation course & planning paddock</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Palette « pit-wall » : asphalte + feux de départ (rouge/orange/vert) + bleu télémétrie.
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          track:   '#0B0E13',
+          surface: '#141920',
+          panel:   '#1C232D',
+          panel2:  '#232C38',
+          line:    '#2A333F',
+          ink:     '#E6EDF3',
+          mute:    '#8B98A8',
+          rosso:   '#E10600',
+          amber:   '#F5A623',
+          go:      '#2ED47A',
+          info:    '#4C86E0'
+        },
+        fontFamily: {
+          display: ['Oxanium', 'system-ui', 'sans-serif'],
+          body:    ['Inter', 'system-ui', 'sans-serif']
+        }
+      }
+    }
+  }
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{ --label-w: 220px; }
+  html,body{ background:#0B0E13; color:#E6EDF3; font-family:'Inter',system-ui,sans-serif; }
+  body{ -webkit-font-smoothing:antialiased; }
+  .font-display{ font-family:'Oxanium',system-ui,sans-serif; }
+  .tnum{ font-variant-numeric: tabular-nums; }
+
+  /* Accessibilité : focus visible net */
+  :focus-visible{ outline:2px solid #4C86E0; outline-offset:2px; border-radius:6px; }
+
+  /* Bande damier — seul clin d'œil décoratif, discret */
+  .checkers{
+    background-image:
+      conic-gradient(#0B0E13 90deg, transparent 90deg 180deg, #0B0E13 180deg 270deg, transparent 270deg);
+    background-size:8px 8px; opacity:.5;
+  }
+
+  /* Scrollbars sobres */
+  ::-webkit-scrollbar{ height:10px; width:10px; }
+  ::-webkit-scrollbar-thumb{ background:#2A333F; border-radius:8px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  /* Cluster instrument (hero) */
+  .tile{ background:#141920; border:1px solid #2A333F; border-radius:12px; padding:12px 14px; }
+  .tile-num{ font-size:30px; line-height:1; font-weight:700; }
+  .tile-label{ font-size:11px; color:#8B98A8; margin-top:6px; }
+
+  /* Countdown */
+  .cd-seg{ display:flex; flex-direction:column; align-items:center; min-width:52px; }
+  .cd-n{ font-size:38px; font-weight:800; line-height:1; letter-spacing:1px; }
+  .cd-u{ font-size:10px; color:#8B98A8; margin-top:4px; }
+  .cd-colon{ font-size:30px; color:#3a4552; font-weight:700; align-self:flex-start; margin-top:2px; }
+
+  /* Onglets */
+  .tab{ padding:9px 16px; font-size:13px; font-weight:600; border-radius:9px; border:1px solid transparent; color:#8B98A8; transition:background .15s,color .15s; }
+  .tab:hover{ color:#E6EDF3; background:#1C232D; }
+  .tab[aria-selected="true"]{ background:#1C232D; color:#E6EDF3; border-color:#2A333F; box-shadow: inset 0 -2px 0 #E10600; }
+
+  /* Champs */
+  .in{ width:100%; font-size:13px; background:#0B0E13; border:1px solid #2A333F; color:#E6EDF3; border-radius:9px; padding:9px 11px; }
+  .in::placeholder{ color:#5a6675; }
+  .in:focus{ border-color:#4C86E0; }
+
+  /* Boutons */
+  .btn{ font-size:13px; font-weight:600; border-radius:9px; padding:9px 14px; border:1px solid #2A333F; background:#1C232D; color:#E6EDF3; transition:background .15s,border-color .15s; cursor:pointer; }
+  .btn:hover{ background:#232C38; }
+  .btn-primary{ background:#E10600; border-color:#E10600; color:#fff; }
+  .btn-primary:hover{ background:#c40500; }
+  .btn-ghost{ background:transparent; }
+
+  .badge{ display:inline-block; font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; border:1px solid transparent; }
+
+  /* Barres de progression */
+  .bar{ height:6px; border-radius:999px; background:#2A333F; overflow:hidden; }
+  .bar > i{ display:block; height:100%; border-radius:999px; background:#2ED47A; }
+
+  /* Lignes de tableau */
+  tbody tr:hover{ background:#181f28; }
+  .overdue-row td:first-child{ box-shadow: inset 3px 0 0 #E10600; }
+
+  /* ------- GANTT ------- */
+  .g-row{ display:flex; align-items:center; height:36px; }
+  .g-label{ flex:0 0 var(--label-w); width:var(--label-w); padding-right:14px; font-size:12px; color:#E6EDF3; overflow:hidden; }
+  .g-label small{ color:#8B98A8; }
+  .g-track{ position:relative; flex:1 1 auto; height:24px; border-radius:7px; background:transparent; border:1px solid #202832; }
+  .g-bar{ position:absolute; top:2px; bottom:2px; border-radius:5px; overflow:hidden; display:flex; align-items:center; }
+  .g-bar > .fill{ position:absolute; left:0; top:0; bottom:0; }
+  .g-bar > .lab{ position:relative; font-size:10px; font-weight:700; padding:0 7px; white-space:nowrap; color:#0B0E13; mix-blend-mode:normal; }
+  .g-body{ position:relative; }
+  .g-overlay{ position:absolute; top:0; bottom:0; left:var(--label-w); right:0; pointer-events:none; }
+  .g-grid{ position:absolute; top:0; bottom:0; width:1px; background:#1a212b; }
+  .g-today{ position:absolute; top:-6px; bottom:0; width:2px; background:#4C86E0; }
+  .g-today::after{ content:'Aujourd’hui'; position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:9px; color:#4C86E0; white-space:nowrap; }
+  .g-race{ position:absolute; top:-6px; bottom:0; width:2px; background:#E10600; }
+  .g-race::after{ content:'🏁 Course'; position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:9px; color:#E10600; white-space:nowrap; }
+
+  @media (max-width:640px){ :root{ --label-w:120px; } .cd-n{ font-size:30px; } }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
 </head>
-<body class="antialiased pb-16">
+<body class="pb-20">
 
-    <!-- En-tête style Paddock Racing / GitHub Dark -->
-    <header class="bg-[#161b22] border-b gh-border py-4 px-6 sticky top-0 z-50 shadow-md">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-red-600 p-2 rounded-lg text-white font-black tracking-wider text-sm flex items-center gap-1 shadow-inner">
-                    🏎️ GRIDBOOK
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold text-white flex items-center gap-2">
-                        Paddock Racing Management <span class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-mono">v3.0 Pro</span>
-                    </h1>
-                    <p class="text-xs text-gray-400">Planification technique, préparation véhicules & logistique de course</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4 flex-wrap">
-                <!-- Widget Compte à rebours Course -->
-                <div id="race-countdown" class="text-xs bg-[#21262d] px-3 py-1.5 rounded-md border gh-border font-mono text-amber-400 flex items-center gap-1.5">
-                    <span>⏳ Prochaine Course :</span> <span id="countdown-timer" class="font-bold">--d --h --m</span>
-                </div>
-                <div id="global-progress" class="text-right text-xs bg-[#21262d] px-3 py-1.5 rounded-md border gh-border"></div>
-                <button id="auth-btn" onclick="toggleAuth()" class="bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-semibold px-3.5 py-2 rounded-md border gh-border transition-all flex items-center gap-1.5 shadow-sm">
-                    🔒 <span id="auth-btn-text">Mode Admin</span>
-                </button>
-            </div>
+<!-- Barre supérieure -->
+<header class="bg-surface border-b border-line sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="font-display font-extrabold text-white bg-rosso rounded-lg px-2.5 py-1.5 text-sm tracking-wide shrink-0">PIT&nbsp;WALL</div>
+      <div class="min-w-0">
+        <h1 class="font-display font-bold text-white text-base leading-tight truncate">Préparation course & planning paddock</h1>
+        <p class="text-xs text-mute truncate">Carnet de bord technique — moteur, châssis, télémétrie, stratégie</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 shrink-0">
+      <span class="hidden sm:inline text-xs text-mute">Rôle&nbsp;: <b id="role-badge" class="text-ink font-semibold">Lecture seule</b></span>
+      <button id="auth-btn" class="btn btn-ghost" onclick="toggleAuth()" aria-label="Basculer le mode administrateur">
+        🔒 <span id="auth-btn-text">Mode ingénieur</span>
+      </button>
+    </div>
+  </div>
+  <div class="checkers h-1.5 w-full" aria-hidden="true"></div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 md:px-6 mt-6 md:mt-8">
+
+  <!-- HERO : cluster d'instruments (jauge + compte à rebours + indicateurs) -->
+  <section class="bg-panel border border-line rounded-2xl p-5 md:p-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-[240px,1fr] gap-6 items-center">
+      <!-- Jauge de préparation -->
+      <div class="flex flex-col items-center">
+        <div id="gauge" class="w-full max-w-[240px]" role="img" aria-label="Niveau de préparation de la voiture"></div>
+      </div>
+      <!-- Droite -->
+      <div class="min-w-0">
+        <div class="text-xs text-mute mb-1">Départ&nbsp;· <span id="cd-event" class="text-ink font-semibold">—</span></div>
+        <div id="countdown" class="flex items-center gap-2 mb-5">
+          <div class="cd-seg"><span id="cd-d" class="cd-n font-display tnum text-ink">--</span><span class="cd-u">jours</span></div>
+          <span class="cd-colon">:</span>
+          <div class="cd-seg"><span id="cd-h" class="cd-n font-display tnum text-ink">--</span><span class="cd-u">heures</span></div>
+          <span class="cd-colon">:</span>
+          <div class="cd-seg"><span id="cd-m" class="cd-n font-display tnum text-ink">--</span><span class="cd-u">min</span></div>
+          <span class="cd-colon">:</span>
+          <div class="cd-seg"><span id="cd-s" class="cd-n font-display tnum text-amber">--</span><span class="cd-u">sec</span></div>
         </div>
-    </header>
-
-    <main class="max-w-7xl mx-auto px-4 mt-8">
-
-        <!-- Barre de navigation des Vues & Filtres rapides -->
-        <div class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b gh-border pb-4">
-            <div class="flex flex-wrap gap-2 items-center">
-                <button onclick="switchView('table')" id="btn-view-table" class="px-4 py-2 text-xs font-semibold rounded-md bg-[#238636] text-white transition-colors flex items-center gap-1.5 shadow-sm">
-                    📋 Tableau & Rubriques
-                </button>
-                <button onclick="switchView('gantt')" id="btn-view-gantt" class="px-4 py-2 text-xs font-semibold rounded-md bg-[#21262d] text-[#c9d1d9] border gh-border hover:bg-[#30363d] transition-colors flex items-center gap-1.5">
-                    📊 Diagramme Gantt
-                </button>
-                <!-- Filtres rapides -->
-                <div class="hidden sm:flex items-center gap-1 ml-4 bg-[#161b22] border gh-border rounded-md p-1">
-                    <span class="text-[10px] text-gray-400 px-2 uppercase font-mono">Filtre :</span>
-                    <button onclick="filterStatus('ALL')" class="px-2.5 py-1 text-xs rounded text-gray-300 hover:bg-[#21262d] font-medium" id="filter-all">Tous</button>
-                    <button onclick="filterStatus('En cours')" class="px-2.5 py-1 text-xs rounded text-amber-400 hover:bg-[#21262d] font-medium" id="filter-inprogress">En cours</button>
-                    <button onclick="filterStatus('Prêt / Validé')" class="px-2.5 py-1 text-xs rounded text-emerald-400 hover:bg-[#21262d] font-medium" id="filter-ready">Validés</button>
-                </div>
-            </div>
-            <div class="text-xs text-gray-400 flex items-center gap-2">
-                <span>Rôle actif :</span> <span id="role-badge" class="font-bold text-gray-200">Utilisateur (Lecture seule)</span>
-            </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="tile"><div id="k-open"  class="tile-num font-display tnum text-ink">0</div><div class="tile-label">Tâches ouvertes</div></div>
+          <div class="tile"><div id="k-crit"  class="tile-num font-display tnum text-rosso">0</div><div class="tile-label">Points bloquants</div></div>
+          <div class="tile"><div id="k-late"  class="tile-num font-display tnum text-mute">0</div><div class="tile-label">En retard</div></div>
+          <div class="tile"><div id="k-ready" class="tile-num font-display tnum text-go">0</div><div class="tile-label">Validées</div></div>
         </div>
+      </div>
+    </div>
+  </section>
 
-        <!-- Panneau d'administration sécurisé (Masqué par défaut) -->
-        <div id="admin-panel" class="hidden mb-8 gh-card p-6 rounded-lg shadow-lg border-l-4 border-l-red-600 bg-[#161b22]">
-            <div class="flex justify-between items-center mb-4 border-b gh-border pb-3">
-                <h2 id="form-title" class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wide">
-                    <span>⚙️</span> Panneau Ingénieur / Admin : Ajouter une Tâche
-                </h2>
-                <div class="flex items-center gap-2">
-                    <button onclick="exportJSON()" class="text-[11px] text-blue-400 bg-blue-950/50 border border-blue-800/50 px-2.5 py-1 rounded font-mono hover:bg-blue-900/40">📥 Exporter JSON</button>
-                    <label class="text-[11px] text-emerald-400 bg-emerald-950/50 border border-emerald-800/50 px-2.5 py-1 rounded font-mono cursor-pointer hover:bg-emerald-900/40">
-                        📤 Importer <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
-                    </label>
-                </div>
-            </div>
-            <form id="task-form" onsubmit="handleFormSubmit(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <input type="hidden" id="edit-section-index" value="">
-                <input type="hidden" id="edit-task-index" value="">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Rubrique / Département</label>
-                    <input type="text" id="input-rubrique" placeholder="Ex: Moteur & Powertrain" required class="w-full text-xs gh-input rounded-md p-2.5">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Intitulé de la Tâche</label>
-                    <input type="text" id="input-name" placeholder="Ex: Révision turbo & cartographie" required class="w-full text-xs gh-input rounded-md p-2.5">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Responsable / Mécanicien</label>
-                    <input type="text" id="input-assignee" placeholder="Ex: Jean (Moteur)" required class="w-full text-xs gh-input rounded-md p-2.5">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Lien d'avancement (Git, Jira, Telemetry)</label>
-                    <input type="url" id="input-link" placeholder="https://github.com/nblinpro/..." required class="w-full text-xs gh-input rounded-md p-2.5">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Planning (Début / Fin)</label>
-                    <div class="flex gap-2">
-                        <input type="date" id="input-start" required class="w-1/2 text-xs gh-input rounded-md p-2">
-                        <input type="date" id="input-end" required class="w-1/2 text-xs gh-input rounded-md p-2">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Niveau de Criticité</label>
-                    <select id="input-priority" class="w-full text-xs gh-input rounded-md p-2.5">
-                        <option value="Normal">🟢 Normal</option>
-                        <option value="Important">🟠 Important</option>
-                        <option value="Critique">🔴 Critique / Bloquant</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Avancement (%) : <span id="range-val" class="text-red-400 font-bold">50</span>%</label>
-                    <input type="range" id="input-progress" min="0" max="100" value="50" oninput="document.getElementById('range-val').innerText = this.value" class="w-full mt-2 accent-red-600 cursor-pointer">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Statut Atelier</label>
-                    <select id="input-status" class="w-full text-xs gh-input rounded-md p-2.5">
-                        <option value="À planifier">À planifier</option>
-                        <option value="En cours">En cours</option>
-                        <option value="Prêt / Validé">Prêt / Validé</option>
-                    </select>
-                </div>
-                <div class="md:col-span-3 flex justify-end gap-3 pt-2">
-                    <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden bg-[#21262d] hover:bg-[#30363d] text-gray-300 text-xs font-bold px-4 py-2 rounded-md transition-all border gh-border">
-                        Annuler
-                    </button>
-                    <button type="submit" id="submit-btn-text" class="gh-btn-red text-xs font-bold px-5 py-2 rounded-md transition-all shadow-sm flex items-center gap-1.5">
-                        + Ajouter la Tâche
-                    </button>
-                </div>
-            </form>
+  <!-- PANNEAU INGÉNIEUR (admin) -->
+  <section id="admin-panel" class="hidden mb-6 bg-panel border border-line rounded-2xl overflow-hidden">
+    <div class="bg-panel2 border-b border-line px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <h2 id="form-title" class="font-display font-bold text-white text-sm flex items-center gap-2">⚙️ Panneau ingénieur — ajouter une tâche</h2>
+      <div class="flex items-center gap-2 flex-wrap">
+        <button class="btn" onclick="exportJSON()">📥 Exporter JSON</button>
+        <button class="btn" onclick="exportCSV()">📄 Exporter CSV</button>
+        <label class="btn cursor-pointer">📤 Importer<input type="file" accept=".json" onchange="importJSON(event)" class="hidden"></label>
+        <button class="btn" onclick="resetDemo()">↺ Données démo</button>
+      </div>
+    </div>
+
+    <!-- Réglage de la course -->
+    <div class="px-5 py-4 border-b border-line grid grid-cols-1 sm:grid-cols-[1fr,auto,auto] gap-3 items-end bg-surface/40">
+      <div>
+        <label class="block text-xs text-mute mb-1">Nom de la prochaine course</label>
+        <input id="race-name" class="in" placeholder="Ex : Grand Prix — Circuit Paul Ricard">
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Date & heure du départ</label>
+        <input id="race-date" type="datetime-local" class="in">
+      </div>
+      <button class="btn btn-primary" onclick="saveRace()">Appliquer</button>
+    </div>
+
+    <form id="task-form" onsubmit="handleFormSubmit(event)" class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <input type="hidden" id="edit-s"><input type="hidden" id="edit-t">
+      <div>
+        <label class="block text-xs text-mute mb-1">Département / rubrique</label>
+        <input id="f-rub" class="in" list="rub-list" placeholder="Ex : Moteur & Powertrain" required>
+        <datalist id="rub-list"></datalist>
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Intitulé de l’intervention</label>
+        <input id="f-name" class="in" placeholder="Ex : Révision turbo & cartographie" required>
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Responsable / mécanicien</label>
+        <input id="f-assignee" class="in" placeholder="Ex : Marc (moteur)" required>
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Lien de suivi (Git, Jira, télémétrie)</label>
+        <input id="f-link" type="url" class="in" placeholder="https://github.com/nblinpro/…">
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Planning (début → fin)</label>
+        <div class="flex gap-2">
+          <input id="f-start" type="date" class="in" required>
+          <input id="f-end" type="date" class="in" required>
         </div>
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Criticité</label>
+        <select id="f-priority" class="in">
+          <option value="Normal">🔵 Normal</option>
+          <option value="Important">🟠 Important</option>
+          <option value="Critique">🔴 Critique / bloquant</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Avancement — <span id="range-val" class="text-go font-bold">50</span>%</label>
+        <input id="f-progress" type="range" min="0" max="100" value="50" class="w-full mt-3 accent-rosso cursor-pointer"
+               oninput="document.getElementById('range-val').innerText=this.value">
+      </div>
+      <div>
+        <label class="block text-xs text-mute mb-1">Statut atelier</label>
+        <select id="f-status" class="in">
+          <option value="À planifier">À planifier</option>
+          <option value="En cours">En cours</option>
+          <option value="Prêt / Validé">Prêt / Validé</option>
+        </select>
+      </div>
+      <div class="md:col-span-3 flex justify-end gap-3 pt-1">
+        <button type="button" id="cancel-btn" onclick="resetForm()" class="btn hidden">Annuler</button>
+        <button type="submit" id="submit-btn" class="btn btn-primary">+ Ajouter la tâche</button>
+      </div>
+    </form>
+    <p class="px-5 pb-4 -mt-2 text-[11px] text-mute">Le verrou est un garde-fou d’interface, pas une vraie authentification — les données restent locales à ce navigateur.</p>
+  </section>
 
-        <!-- Conteneur Vue Tableau -->
-        <div id="view-table-container" class="space-y-6">
-            <!-- Injecté par JS -->
-        </div>
+  <!-- Onglets + contrôles -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+    <div role="tablist" class="flex gap-2">
+      <button role="tab" id="tab-board"  aria-selected="true"  class="tab" onclick="switchView('board')">📊 Tableau de bord</button>
+      <button role="tab" id="tab-table"  aria-selected="false" class="tab" onclick="switchView('table')">📋 Interventions</button>
+      <button role="tab" id="tab-gantt"  aria-selected="false" class="tab" onclick="switchView('gantt')">📈 Gantt</button>
+    </div>
+    <div id="controls" class="hidden flex-wrap items-center gap-2">
+      <input id="search" class="in max-w-[220px]" placeholder="Rechercher (tâche, responsable)…" oninput="setFilter('q', this.value)">
+      <select id="fltDept" class="in w-auto" onchange="setFilter('dept', this.value)"></select>
+      <select class="in w-auto" onchange="setFilter('status', this.value)">
+        <option value="ALL">Tous statuts</option><option>À planifier</option><option>En cours</option><option>Prêt / Validé</option>
+      </select>
+      <select class="in w-auto" onchange="setFilter('priority', this.value)">
+        <option value="ALL">Toutes criticités</option><option>Critique</option><option>Important</option><option>Normal</option>
+      </select>
+      <select class="in w-auto" onchange="setFilter('sort', this.value)">
+        <option value="date">Tri : date de début</option>
+        <option value="end">Tri : échéance</option>
+        <option value="priority">Tri : criticité</option>
+        <option value="progress">Tri : avancement</option>
+        <option value="name">Tri : nom</option>
+      </select>
+    </div>
+  </div>
 
-        <!-- Conteneur Vue Gantt -->
-        <div id="view-gantt-container" class="hidden gh-card rounded-lg p-6 overflow-x-auto shadow-md">
-            <div class="flex justify-between items-center mb-6 border-b gh-border pb-3">
-                <h2 class="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                    <span>📈</span> Chronogramme & Planning Paddock (Gantt)
-                </h2>
-                <span class="text-xs text-gray-400">Échelle dynamique basée sur les échéances des courses</span>
+  <div id="view"></div>
+</main>
+
+<script>
+/* ============================ STOCKAGE ROBUSTE ============================ */
+/* Essaie localStorage (persiste si le fichier est hébergé/ouvert en local),
+   bascule en mémoire si l'environnement le bloque (ex : aperçu). Aucune erreur. */
+const Store = {
+  mem:{},
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return (k in this.mem)?this.mem[k]:null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ this.mem[k]=v; } }
+};
+const load = (k)=>{ const v=Store.get(k); if(v==null) return null; try{ return JSON.parse(v); }catch(e){ return null; } };
+const save = (k,val)=> Store.set(k, JSON.stringify(val));
+
+/* ============================ DONNÉES DÉMO ============================ */
+const DEMO = [
+  { rubrique:"Moteur & Powertrain", tasks:[
+    { name:"Reconditionnement V8 bi-turbo", assignee:"Marc (moteur)", priority:"Critique", start:"2026-08-25", end:"2026-09-05", progress:100, link:"https://github.com/nblinpro", status:"Prêt / Validé" },
+    { name:"Cartographie injection & passage au banc", assignee:"Thomas (élec)", priority:"Important", start:"2026-09-06", end:"2026-09-14", progress:75, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Contrôle circuit de refroidissement", assignee:"Léa (mécanique)", priority:"Normal", start:"2026-09-15", end:"2026-09-20", progress:0, link:"https://github.com/nblinpro", status:"À planifier" }
+  ]},
+  { rubrique:"Châssis & Aérodynamique", tasks:[
+    { name:"Réglage géométrie & carrossage", assignee:"Lucas (châssis)", priority:"Normal", start:"2026-09-08", end:"2026-09-16", progress:50, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Installation nouveau plancher aéro", assignee:"Camille (aéro)", priority:"Important", start:"2026-09-10", end:"2026-09-19", progress:45, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Validation appui en soufflerie", assignee:"Camille (aéro)", priority:"Critique", start:"2026-09-20", end:"2026-09-24", progress:0, link:"https://github.com/nblinpro", status:"À planifier" }
+  ]},
+  { rubrique:"Pneumatiques & Freinage", tasks:[
+    { name:"Remplacement disques & plaquettes carbone", assignee:"Sofia (freins)", priority:"Important", start:"2026-09-02", end:"2026-09-08", progress:70, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Purge circuit de freinage", assignee:"Sofia (freins)", priority:"Normal", start:"2026-08-30", end:"2026-09-03", progress:100, link:"https://github.com/nblinpro", status:"Prêt / Validé" },
+    { name:"Montage trains pluie & slicks", assignee:"Karim (pneus)", priority:"Normal", start:"2026-09-18", end:"2026-09-22", progress:10, link:"https://github.com/nblinpro", status:"En cours" }
+  ]},
+  { rubrique:"Électronique & Télémétrie", tasks:[
+    { name:"Mise à jour firmware ECU", assignee:"Thomas (élec)", priority:"Critique", start:"2026-08-28", end:"2026-09-04", progress:40, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Étalonnage capteurs télémétrie", assignee:"Nadia (data)", priority:"Important", start:"2026-09-09", end:"2026-09-15", progress:35, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Test liaison radio & data pit-wall", assignee:"Nadia (data)", priority:"Normal", start:"2026-09-21", end:"2026-09-24", progress:0, link:"https://github.com/nblinpro", status:"À planifier" }
+  ]},
+  { rubrique:"Logistique & Stratégie", tasks:[
+    { name:"Plan de transport paddock", assignee:"Hugo (log)", priority:"Normal", start:"2026-09-05", end:"2026-09-12", progress:60, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Simulation stratégie arrêts (undercut)", assignee:"Élodie (stratégie)", priority:"Important", start:"2026-09-16", end:"2026-09-23", progress:25, link:"https://github.com/nblinpro", status:"En cours" },
+    { name:"Briefing pilotes & run plan", assignee:"Élodie (stratégie)", priority:"Critique", start:"2026-09-25", end:"2026-09-26", progress:0, link:"https://github.com/nblinpro", status:"À planifier" }
+  ]}
+];
+
+/* ============================ ÉTAT ============================ */
+let projectData = load('paddock.tasks.v1') || structuredClone(DEMO);
+let race        = load('paddock.race.v1')  || { name:"Grand Prix — Circuit Paul Ricard", date:"2026-09-27T15:00" };
+let isAdmin     = load('paddock.admin.v1') === true;
+let currentView = 'board';
+let filters     = { q:'', status:'ALL', priority:'ALL', dept:'ALL', sort:'date' };
+let gaugeShown  = 0, gaugeAnimated = false;
+
+const REDUCE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const C = { rosso:'#E10600', amber:'#F5A623', go:'#2ED47A', info:'#4C86E0', mute:'#8B98A8', line:'#2A333F' };
+
+const persist = ()=> save('paddock.tasks.v1', projectData);
+
+/* ============================ HELPERS ============================ */
+const esc = (s='')=> String(s).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+function pDate(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y, m-1, d); }
+function today0(){ const t=new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); }
+const isDone  = t => t.status === 'Prêt / Validé';
+const isLate  = t => !isDone(t) && pDate(t.end) && pDate(t.end) < today0();
+const fmtDM   = s => { const d=pDate(s); return d ? String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0') : '—'; };
+const pWeight = p => ({Critique:3, Important:2, Normal:1}[p] || 0);
+const prioColor = p => p==='Critique' ? C.rosso : p==='Important' ? C.amber : C.info;
+
+function statusBadge(s){
+  const m = { 'Prêt / Validé':['bg-go/15','text-go','border-go/40'],
+              'En cours':['bg-amber/15','text-amber','border-amber/40'],
+              'À planifier':['bg-panel2','text-mute','border-line'] }[s] || ['bg-panel2','text-mute','border-line'];
+  return `<span class="badge ${m[0]} ${m[1]} ${m[2]}">${esc(s)}</span>`;
+}
+function prioBadge(p){
+  const m = { 'Critique':['bg-rosso/15','text-rosso','border-rosso/40'],
+              'Important':['bg-amber/15','text-amber','border-amber/40'],
+              'Normal':['bg-info/15','text-info','border-info/40'] }[p] || ['bg-info/15','text-info','border-info/40'];
+  return `<span class="badge ${m[0]} ${m[1]} ${m[2]}">${esc(p||'Normal')}</span>`;
+}
+
+/* ============================ STATS GLOBALES ============================ */
+function stats(){
+  let all=[]; projectData.forEach(s=> s.tasks.forEach(t=> all.push(t)));
+  const n = all.length || 1;
+  const avg = Math.round(all.reduce((a,t)=>a+(+t.progress||0),0)/n);
+  return {
+    total: all.length,
+    avg,
+    open:  all.filter(t=>!isDone(t)).length,
+    crit:  all.filter(t=>t.priority==='Critique' && !isDone(t)).length,
+    late:  all.filter(isLate).length,
+    ready: all.filter(isDone).length,
+    planif:all.filter(t=>t.status==='À planifier').length,
+    prog:  all.filter(t=>t.status==='En cours').length
+  };
+}
+
+/* ============================ JAUGE (SVG, style tachymètre) ============================ */
+function polar(cx,cy,r,deg){ const a=deg*Math.PI/180; return { x:cx+r*Math.cos(a), y:cy+r*Math.sin(a) }; }
+function arc(cx,cy,r,a0,a1){ const p0=polar(cx,cy,r,a0), p1=polar(cx,cy,r,a1); const large=(a1-a0)>180?1:0; return `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`; }
+
+function gaugeSVG(v){
+  const cx=100, cy=104, r=80, w=13;
+  const a0=180, span=180, va=a0 + (v/100)*span;
+  const band = v>=75 ? C.go : v>=40 ? C.amber : C.rosso;
+  const word = v>=75 ? 'Prêt pour la grille' : v>=40 ? 'En préparation' : 'En alerte';
+  // graduations
+  let ticks=''; for(let i=0;i<=10;i++){ const ang=a0+(i/10)*span; const o=polar(cx,cy,r-w-2,ang), q=polar(cx,cy,r-w-8,ang);
+    ticks+=`<line x1="${o.x.toFixed(1)}" y1="${o.y.toFixed(1)}" x2="${q.x.toFixed(1)}" y2="${q.y.toFixed(1)}" stroke="#33404f" stroke-width="${i%5===0?2:1}"/>`; }
+  const nd = polar(cx,cy,r-w-6,va), nb1=polar(cx,cy,7,va+90), nb2=polar(cx,cy,7,va-90);
+  return `
+  <svg viewBox="0 0 200 124" width="100%">
+    ${ticks}
+    <path d="${arc(cx,cy,r,a0,a0+span)}" fill="none" stroke="#232C38" stroke-width="${w}" stroke-linecap="round"/>
+    <path d="${arc(cx,cy,r,a0,va)}" fill="none" stroke="${band}" stroke-width="${w}" stroke-linecap="round"/>
+    <polygon points="${nd.x.toFixed(1)},${nd.y.toFixed(1)} ${nb1.x.toFixed(1)},${nb1.y.toFixed(1)} ${nb2.x.toFixed(1)},${nb2.y.toFixed(1)}" fill="#E6EDF3"/>
+    <circle cx="${cx}" cy="${cy}" r="8" fill="#1C232D" stroke="#33404f" stroke-width="2"/>
+    <text x="${cx}" y="66" text-anchor="middle" font-family="Oxanium" font-weight="800" font-size="40" fill="#E6EDF3" style="font-variant-numeric:tabular-nums">${Math.round(v)}<tspan font-size="18" dy="-14">%</tspan></text>
+    <text x="${cx}" y="90" text-anchor="middle" font-family="Inter" font-size="11" fill="${band}" font-weight="600">${word}</text>
+  </svg>`;
+}
+function renderGauge(target, animate){
+  const el = document.getElementById('gauge');
+  if(!animate || REDUCE){ gaugeShown=target; el.innerHTML=gaugeSVG(target); return; }
+  const from=0, dur=900, t0=performance.now();
+  (function step(now){
+    const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3);
+    el.innerHTML=gaugeSVG(from+(target-from)*e);
+    if(k<1) requestAnimationFrame(step); else gaugeShown=target;
+  })(performance.now());
+}
+
+/* ============================ COMPTE À REBOURS ============================ */
+function tickCountdown(){
+  const target = new Date(race.date).getTime();
+  const dist = target - Date.now();
+  const set=(id,v)=> document.getElementById(id).innerText = String(v).padStart(2,'0');
+  if(isNaN(target)){ ['cd-d','cd-h','cd-m','cd-s'].forEach(i=>document.getElementById(i).innerText='--'); return; }
+  if(dist<=0){ ['cd-d','cd-h','cd-m'].forEach(i=>set(i,0)); set('cd-s',0);
+    document.getElementById('cd-event').innerHTML = esc(race.name)+' — <span class="text-rosso font-semibold">départ donné</span>'; return; }
+  set('cd-d', Math.floor(dist/86400000));
+  set('cd-h', Math.floor(dist/3600000)%24);
+  set('cd-m', Math.floor(dist/60000)%60);
+  set('cd-s', Math.floor(dist/1000)%60);
+}
+function refreshEventLabel(){ document.getElementById('cd-event').innerText = race.name || '—'; }
+
+/* ============================ HERO ============================ */
+function renderHero(){
+  const s = stats();
+  document.getElementById('k-open').innerText  = s.open;
+  document.getElementById('k-crit').innerText  = s.crit;
+  const late = document.getElementById('k-late'); late.innerText = s.late; late.className = 'tile-num font-display tnum ' + (s.late>0?'text-rosso':'text-mute');
+  document.getElementById('k-ready').innerText = s.ready;
+  renderGauge(s.avg, !gaugeAnimated); gaugeAnimated = true;
+}
+
+/* ============================ FILTRAGE (Interventions & Gantt) ============================ */
+function getFiltered(){
+  const q = filters.q.trim().toLowerCase();
+  let data = projectData.map((sec,s)=>({
+    rubrique: sec.rubrique, _s:s,
+    tasks: sec.tasks.map((t,i)=>({ ...t, _s:s, _i:i })).filter(t=>{
+      if(filters.status!=='ALL'   && t.status!==filters.status) return false;
+      if(filters.priority!=='ALL' && (t.priority||'Normal')!==filters.priority) return false;
+      if(q && !((t.name||'').toLowerCase().includes(q) || (t.assignee||'').toLowerCase().includes(q))) return false;
+      return true;
+    })
+  }));
+  if(filters.dept!=='ALL') data = data.filter(s=>s.rubrique===filters.dept);
+  data = data.filter(s=>s.tasks.length>0);
+  const cmp = {
+    date:(a,b)=>(pDate(a.start)-pDate(b.start)),
+    end:(a,b)=>(pDate(a.end)-pDate(b.end)),
+    progress:(a,b)=>(b.progress-a.progress),
+    priority:(a,b)=>(pWeight(b.priority)-pWeight(a.priority)),
+    name:(a,b)=>(a.name||'').localeCompare(b.name||'')
+  }[filters.sort] || (()=>0);
+  data.forEach(s=> s.tasks.sort(cmp));
+  return data;
+}
+function setFilter(key,val){ filters[key]=val; if(currentView!=='board') renderView(); }
+
+/* ============================ VUE : TABLEAU DE BORD ============================ */
+function renderBoard(){
+  const s = stats();
+  // Avancement par département
+  const depts = projectData.map(sec=>{
+    const n=sec.tasks.length||1;
+    const avg=Math.round(sec.tasks.reduce((a,t)=>a+(+t.progress||0),0)/n);
+    return { name:sec.rubrique, avg, n:sec.tasks.length };
+  }).sort((a,b)=>b.avg-a.avg);
+
+  const deptBars = depts.map(d=>`
+    <div>
+      <div class="flex justify-between text-xs mb-1.5">
+        <span class="text-ink truncate pr-2">${esc(d.name)} <span class="text-mute">· ${d.n}</span></span>
+        <span class="font-display tnum ${d.avg>=75?'text-go':d.avg>=40?'text-amber':'text-rosso'}">${d.avg}%</span>
+      </div>
+      <div class="bar"><i style="width:${d.avg}%; background:${d.avg>=75?C.go:d.avg>=40?C.amber:C.rosso}"></i></div>
+    </div>`).join('');
+
+  // Répartition des statuts (donut)
+  const segs = [
+    { value:s.planif, color:C.mute,  label:'À planifier' },
+    { value:s.prog,   color:C.amber, label:'En cours' },
+    { value:s.ready,  color:C.go,    label:'Validées' }
+  ];
+  const total = segs.reduce((a,x)=>a+x.value,0)||1, r=54, circ=2*Math.PI*r; let off=0;
+  const rings = segs.map(x=>{ const len=(x.value/total)*circ; const c=`<circle cx="80" cy="80" r="${r}" fill="none" stroke="${x.color}" stroke-width="16" stroke-dasharray="${len.toFixed(2)} ${(circ-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 80 80)"/>`; off+=len; return c; }).join('');
+  const legend = segs.map(x=>`<div class="flex items-center justify-between text-xs py-1"><span class="flex items-center gap-2"><i class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${x.color}"></i>${x.label}</span><b class="font-display tnum text-ink">${x.value}</b></div>`).join('');
+
+  // Alertes pit-wall : bloquants + en retard
+  let alerts=[]; projectData.forEach((sec,s2)=> sec.tasks.forEach((t,i)=>{
+    const late=isLate(t), crit=(t.priority==='Critique' && !isDone(t));
+    if(late||crit) alerts.push({ t, s:s2, i, late, crit });
+  }));
+  alerts.sort((a,b)=> (b.late+b.crit)-(a.late+a.crit) || pWeight(b.t.priority)-pWeight(a.t.priority));
+  const alertItems = alerts.length ? alerts.map(a=>`
+    <div class="flex items-center justify-between gap-3 py-2.5 border-b border-line last:border-0 ${isAdmin?'cursor-pointer hover:bg-panel2/50 px-2 -mx-2 rounded-lg':''}" ${isAdmin?`onclick="editTask(${a.s},${a.i})"`:''}>
+      <div class="min-w-0">
+        <div class="text-sm text-ink truncate">${esc(a.t.name)}</div>
+        <div class="text-xs text-mute truncate">${esc(a.t.assignee||'Non assigné')} · échéance ${fmtDM(a.t.end)}</div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        ${a.crit?'<span class="badge bg-rosso/15 text-rosso border-rosso/40">Bloquant</span>':''}
+        ${a.late?'<span class="badge bg-amber/15 text-amber border-amber/40">En retard</span>':''}
+      </div>
+    </div>`).join('')
+    : `<div class="text-sm text-mute py-6 text-center">Aucun point bloquant. La voiture avance selon le plan. 🟢</div>`;
+
+  document.getElementById('view').innerHTML = `
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="lg:col-span-2 bg-panel border border-line rounded-2xl p-5">
+        <h3 class="font-display font-bold text-white text-sm mb-4">Avancement par département</h3>
+        <div class="space-y-3.5">${deptBars}</div>
+      </div>
+      <div class="bg-panel border border-line rounded-2xl p-5">
+        <h3 class="font-display font-bold text-white text-sm mb-3">Répartition des statuts</h3>
+        <div class="flex items-center gap-4">
+          <div class="relative shrink-0">
+            <svg viewBox="0 0 160 160" width="128" height="128">
+              <circle cx="80" cy="80" r="${r}" fill="none" stroke="#232C38" stroke-width="16"/>
+              ${rings}
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="font-display font-extrabold tnum text-2xl text-ink">${s.total}</span>
+              <span class="text-[10px] text-mute">tâches</span>
             </div>
-            <div id="gantt-content" class="min-w-[800px] space-y-6">
-                <!-- Injecté par JS -->
-            </div>
+          </div>
+          <div class="flex-1">${legend}</div>
         </div>
+      </div>
+      <div class="lg:col-span-3 bg-panel border border-line rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-2">
+          <h3 class="font-display font-bold text-white text-sm">Alertes pit-wall</h3>
+          <span class="badge ${alerts.length?'bg-rosso/15 text-rosso border-rosso/40':'bg-go/15 text-go border-go/40'}">${alerts.length}</span>
+        </div>
+        <p class="text-xs text-mute mb-3">Interventions critiques non terminées ou en retard sur l’échéance.</p>
+        ${alertItems}
+      </div>
+    </div>
+    <div class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-mute px-1">
+      <span class="font-semibold text-ink">Légende&nbsp;:</span>
+      <span class="flex items-center gap-1.5"><i class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${C.rosso}"></i>Critique</span>
+      <span class="flex items-center gap-1.5"><i class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${C.amber}"></i>Important / en cours</span>
+      <span class="flex items-center gap-1.5"><i class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${C.info}"></i>Normal</span>
+      <span class="flex items-center gap-1.5"><i class="inline-block w-2.5 h-2.5 rounded-sm" style="background:${C.go}"></i>Validé</span>
+    </div>`;
+}
 
-    </main>
+/* ============================ VUE : INTERVENTIONS (tableau) ============================ */
+function renderTable(){
+  const data = getFiltered();
+  if(!data.length){ document.getElementById('view').innerHTML = emptyState('Aucune intervention ne correspond au filtre.'); return; }
+  document.getElementById('view').innerHTML = data.map(sec=>`
+    <div class="bg-panel border border-line rounded-2xl overflow-hidden mb-5">
+      <div class="bg-panel2 border-b border-line px-5 py-3.5 flex justify-between items-center">
+        <h2 class="font-display font-bold text-sm text-ink flex items-center gap-2">🔧 ${esc(sec.rubrique)}</h2>
+        <span class="badge bg-surface text-mute border-line">${sec.tasks.length} tâche(s)</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs min-w-[820px]">
+          <thead class="text-mute border-b border-line">
+            <tr>
+              <th class="py-3 px-5 font-semibold">Intervention</th>
+              <th class="py-3 px-5 font-semibold">Responsable</th>
+              <th class="py-3 px-5 font-semibold">Criticité</th>
+              <th class="py-3 px-5 font-semibold">Planning</th>
+              <th class="py-3 px-5 font-semibold">Statut</th>
+              <th class="py-3 px-5 font-semibold w-40">Avancement</th>
+              <th class="py-3 px-5 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            ${sec.tasks.map(t=>`
+              <tr class="${isLate(t)?'overdue-row':''}">
+                <td class="py-3.5 px-5 font-semibold text-ink">${esc(t.name)} ${isLate(t)?'<span class="badge bg-rosso/15 text-rosso border-rosso/40 ml-1">retard</span>':''}</td>
+                <td class="py-3.5 px-5 text-mute">${esc(t.assignee||'Non assigné')}</td>
+                <td class="py-3.5 px-5">${prioBadge(t.priority)}</td>
+                <td class="py-3.5 px-5 text-mute font-display tnum whitespace-nowrap">${fmtDM(t.start)} → ${fmtDM(t.end)}</td>
+                <td class="py-3.5 px-5">${statusBadge(t.status)}</td>
+                <td class="py-3.5 px-5">
+                  <div class="flex items-center gap-2">
+                    <div class="bar flex-1"><i style="width:${t.progress}%"></i></div>
+                    <span class="font-display tnum text-mute w-9 text-right">${t.progress}%</span>
+                  </div>
+                </td>
+                <td class="py-3.5 px-5 text-right whitespace-nowrap">
+                  ${t.link?`<a href="${esc(t.link)}" target="_blank" rel="noopener" class="text-info hover:underline">Suivi</a>`:''}
+                  ${isAdmin?`
+                    <button onclick="editTask(${t._s},${t._i})" class="ml-2 text-amber hover:bg-amber/10 rounded-md px-1.5 py-1" title="Modifier" aria-label="Modifier">✏️</button>
+                    <button onclick="deleteTask(${t._s},${t._i})" class="text-rosso hover:bg-rosso/10 rounded-md px-1.5 py-1" title="Supprimer" aria-label="Supprimer">🗑️</button>`:''}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
+}
 
-    <script>
-        let projectData = JSON.parse(localStorage.getItem('motorsportProjectData')) || [
-            {
-                rubrique: "Moteur & Powertrain",
-                tasks: [
-                    { name: "Reconditionnement complet V8 Bi-turbo", assignee: "Marc (Ingénieur)", priority: "Critique", start: "2026-06-01", end: "2026-06-14", progress: 100, link: "https://github.com/nblinpro", status: "Prêt / Validé" },
-                    { name: "Calibration cartographie injection & banc dyno", assignee: "Thomas (Élec)", priority: "Important", start: "2026-06-15", end: "2026-06-22", progress: 75, link: "https://github.com/nblinpro", status: "En cours" }
-                ]
-            },
-            {
-                rubrique: "Châssis & Aérodynamique",
-                tasks: [
-                    { name: "Contrôle géométrie trains roulants & carrossage", assignee: "Lucas (Mécanicien)", priority: "Normal", start: "2026-06-10", end: "2026-06-18", progress: 50, link: "https://github.com/nblinpro", status: "En cours" }
-                ]
-            }
-        ];
+/* ============================ VUE : GANTT ============================ */
+function renderGantt(){
+  const data = getFiltered();
+  let dates=[];
+  data.forEach(s=>s.tasks.forEach(t=>{ if(t.start)dates.push(pDate(t.start)); if(t.end)dates.push(pDate(t.end)); }));
+  const raceD = new Date(race.date); if(!isNaN(raceD)) dates.push(new Date(raceD.getFullYear(),raceD.getMonth(),raceD.getDate()));
+  dates.push(today0());
+  if(!data.length || !dates.length){ document.getElementById('view').innerHTML = emptyState('Aucune tâche planifiée à afficher.'); return; }
 
-        let isAdmin = localStorage.getItem('motorsportAdmin') === 'true';
-        let currentView = 'table';
-        let currentFilter = 'ALL';
+  const DAY=86400000;
+  let min=new Date(Math.min(...dates)), max=new Date(Math.max(...dates));
+  min=new Date(min-2*DAY); max=new Date(+max+3*DAY);
+  const span = Math.max(DAY, max-min);
+  const pct = d => ((d-min)/span)*100;
 
-        // Date cible de la prochaine course (Ex: 24h du Mans ou prochaine manche)
-        const raceDate = new Date("2026-07-15T14:00:00").getTime();
+  // Graduations hebdomadaires (le lundi)
+  let ticks=[]; let cur=new Date(min); cur.setDate(cur.getDate()+((8-cur.getDay())%7)); // prochain lundi
+  while(cur<=max){ ticks.push(new Date(cur)); cur=new Date(+cur+7*DAY); }
+  const grid = ticks.map(d=>`<div class="g-grid" style="left:${pct(d).toFixed(2)}%"></div>`).join('');
+  const axis = ticks.map(d=>`<span class="absolute font-display tnum text-[10px] text-mute" style="left:${pct(d).toFixed(2)}%; transform:translateX(-50%)">${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</span>`).join('');
+  const todayLine = `<div class="g-today" style="left:${pct(today0()).toFixed(2)}%"></div>`;
+  const raceLine  = isNaN(raceD) ? '' : `<div class="g-race" style="left:${pct(new Date(raceD.getFullYear(),raceD.getMonth(),raceD.getDate())).toFixed(2)}%"></div>`;
 
-        function updateCountdown() {
-            const now = new Date().getTime();
-            const distance = raceDate - now;
+  const rows = data.map(sec=>`
+    <div class="mb-4">
+      <div class="text-xs font-display font-bold text-ink bg-panel2 rounded-lg px-3 py-2 mb-2 inline-flex items-center gap-2">🏁 ${esc(sec.rubrique)}</div>
+      ${sec.tasks.map(t=>{
+        const l=pct(pDate(t.start)), w=Math.max(1.5, pct(pDate(t.end))-l);
+        const col=prioColor(t.priority);
+        return `
+        <div class="g-row" title="${esc(t.name)} — ${esc(t.assignee||'')}&#10;${fmtDM(t.start)} → ${fmtDM(t.end)} · ${t.progress}% · ${esc(t.status)}">
+          <div class="g-label truncate">${esc(t.name)}<br><small>${esc(t.assignee||'—')}</small></div>
+          <div class="g-track">
+            <div class="g-bar" style="left:${l.toFixed(2)}%; width:${w.toFixed(2)}%; background:${col}22; border:1px solid ${col}">
+              <div class="fill" style="width:${t.progress}%; background:${col}"></div>
+              <span class="lab" style="color:${t.progress>55?'#0B0E13':'#E6EDF3'}">${t.progress}%</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
 
-            if (distance < 0) {
-                document.getElementById('countdown-timer').innerText = "Course en cours / Passée !";
-                return;
-            }
+  document.getElementById('view').innerHTML = `
+    <div class="bg-panel border border-line rounded-2xl p-5 overflow-x-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-display font-bold text-white text-sm">Chronogramme paddock</h3>
+        <div class="flex items-center gap-4 text-[10px] text-mute">
+          <span class="flex items-center gap-1.5"><i class="inline-block w-3 h-0.5" style="background:${C.info}"></i>Aujourd’hui</span>
+          <span class="flex items-center gap-1.5"><i class="inline-block w-3 h-0.5" style="background:${C.rosso}"></i>Course</span>
+        </div>
+      </div>
+      <div class="min-w-[760px]">
+        <div class="g-row mb-2" style="height:20px">
+          <div class="g-label"></div>
+          <div class="relative flex-1 h-full">${axis}</div>
+        </div>
+        <div class="g-body pt-1">
+          <div class="g-overlay">${grid}</div>
+          ${rows}
+          <div class="g-overlay">${todayLine}${raceLine}</div>
+        </div>
+      </div>
+    </div>`;
+}
 
-            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+function emptyState(msg){
+  return `<div class="bg-panel border border-line rounded-2xl py-16 text-center">
+    <div class="text-3xl mb-2">🏁</div>
+    <p class="text-sm text-mute">${esc(msg)}</p>
+  </div>`;
+}
 
-            document.getElementById('countdown-timer').innerText = `${days}j ${hours}h ${minutes}m`;
-        }
-        setInterval(updateCountdown, 1000);
-        updateCountdown();
+/* ============================ ROUTAGE DES VUES ============================ */
+function renderView(){
+  if(currentView==='board') renderBoard();
+  else if(currentView==='table') renderTable();
+  else renderGantt();
+}
+function switchView(v){
+  currentView=v;
+  ['board','table','gantt'].forEach(k=> document.getElementById('tab-'+k).setAttribute('aria-selected', k===v));
+  document.getElementById('controls').classList.toggle('hidden', v==='board');
+  renderView();
+}
+function renderAll(){ renderHero(); renderView(); populateDeptControls(); }
 
-        function updateAuthUI() {
-            const panel = document.getElementById('admin-panel');
-            const badge = document.getElementById('role-badge');
-            const btnText = document.getElementById('auth-btn-text');
-            const btn = document.getElementById('auth-btn');
+function populateDeptControls(){
+  const names = projectData.map(s=>s.rubrique);
+  document.getElementById('rub-list').innerHTML = names.map(n=>`<option value="${esc(n)}">`).join('');
+  const sel=document.getElementById('fltDept'), keep=filters.dept;
+  sel.innerHTML = `<option value="ALL">Tous départements</option>` + names.map(n=>`<option${n===keep?' selected':''}>${esc(n)}</option>`).join('');
+}
 
-            if (isAdmin) {
-                panel.classList.remove('hidden');
-                badge.innerHTML = "<span class='text-red-400 font-mono bg-red-950/40 px-2 py-0.5 rounded border border-red-800/40'>Administrateur / Ingénieur Chef (Mode Édition)</span>";
-                btnText.innerText = "Verrouiller Admin";
-                btn.className = "bg-red-900/40 hover:bg-red-900/60 text-red-200 text-xs font-semibold px-3.5 py-2 rounded-md border border-red-700 transition-all flex items-center gap-1.5 shadow-sm";
-            } else {
-                panel.classList.add('hidden');
-                badge.innerText = "Utilisateur (Lecture seule)";
-                btnText.innerText = "Mode Admin";
-                btn.className = "bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-semibold px-3.5 py-2 rounded-md border gh-border transition-all flex items-center gap-1.5 shadow-sm";
-                resetForm();
-            }
-            renderAll();
-        }
+/* ============================ FORMULAIRE ADMIN ============================ */
+function handleFormSubmit(e){
+  e.preventDefault();
+  const rub=document.getElementById('f-rub').value.trim();
+  const start=document.getElementById('f-start').value, end=document.getElementById('f-end').value;
+  if(pDate(end) < pDate(start)){ alert("La date de fin ne peut pas précéder la date de début."); return; }
+  const task={
+    name:document.getElementById('f-name').value.trim(),
+    assignee:document.getElementById('f-assignee').value.trim(),
+    priority:document.getElementById('f-priority').value,
+    start, end,
+    progress:parseInt(document.getElementById('f-progress').value,10),
+    link:document.getElementById('f-link').value.trim(),
+    status:document.getElementById('f-status').value
+  };
+  const si=document.getElementById('edit-s').value, ti=document.getElementById('edit-t').value;
+  if(si!=='' && ti!==''){
+    const old=projectData[si].rubrique;
+    if(old.toLowerCase()!==rub.toLowerCase()){
+      projectData[si].tasks.splice(ti,1);
+      if(!projectData[si].tasks.length) projectData.splice(si,1);
+      const tgt=projectData.find(s=>s.rubrique.toLowerCase()===rub.toLowerCase());
+      tgt ? tgt.tasks.push(task) : projectData.push({rubrique:rub, tasks:[task]});
+    } else projectData[si].tasks[ti]=task;
+  } else {
+    const s=projectData.find(x=>x.rubrique.toLowerCase()===rub.toLowerCase());
+    s ? s.tasks.push(task) : projectData.push({rubrique:rub, tasks:[task]});
+  }
+  persist(); resetForm(); renderAll();
+}
+function editTask(s,t){
+  if(!isAdmin) return;
+  const task=projectData[s].tasks[t];
+  document.getElementById('edit-s').value=s; document.getElementById('edit-t').value=t;
+  document.getElementById('f-rub').value=projectData[s].rubrique;
+  document.getElementById('f-name').value=task.name;
+  document.getElementById('f-assignee').value=task.assignee||'';
+  document.getElementById('f-priority').value=task.priority||'Normal';
+  document.getElementById('f-link').value=task.link||'';
+  document.getElementById('f-start').value=task.start;
+  document.getElementById('f-end').value=task.end;
+  document.getElementById('f-progress').value=task.progress; document.getElementById('range-val').innerText=task.progress;
+  document.getElementById('f-status').value=task.status;
+  document.getElementById('form-title').innerHTML='✏️ Panneau ingénieur — modifier la tâche';
+  document.getElementById('submit-btn').innerText='Enregistrer les modifications';
+  document.getElementById('cancel-btn').classList.remove('hidden');
+  document.getElementById('admin-panel').scrollIntoView({behavior:REDUCE?'auto':'smooth'});
+}
+function resetForm(){
+  document.getElementById('task-form').reset();
+  document.getElementById('edit-s').value=''; document.getElementById('edit-t').value='';
+  document.getElementById('range-val').innerText='50';
+  document.getElementById('form-title').innerHTML='⚙️ Panneau ingénieur — ajouter une tâche';
+  document.getElementById('submit-btn').innerText='+ Ajouter la tâche';
+  document.getElementById('cancel-btn').classList.add('hidden');
+}
+function deleteTask(s,t){
+  if(!isAdmin) return;
+  if(!confirm("Supprimer cette intervention du carnet de bord ?")) return;
+  projectData[s].tasks.splice(t,1);
+  if(!projectData[s].tasks.length) projectData.splice(s,1);
+  persist(); resetForm(); renderAll();
+}
 
-        function toggleAuth() {
-            if (!isAdmin) {
-                const password = prompt("🔐 Entrez le code d'accès administrateur / ingénieur :");
-                if (password === "admin123") {
-                    isAdmin = true;
-                    localStorage.setItem('motorsportAdmin', 'true');
-                    updateAuthUI();
-                } else if (password !== null) {
-                    alert("❌ Code d'accès erroné.");
-                }
-            } else {
-                isAdmin = false;
-                localStorage.setItem('motorsportAdmin', 'false');
-                updateAuthUI();
-            }
-        }
+/* ============================ COURSE ============================ */
+function saveRace(){
+  const name=document.getElementById('race-name').value.trim();
+  const date=document.getElementById('race-date').value;
+  if(name) race.name=name; if(date) race.date=date;
+  save('paddock.race.v1', race);
+  refreshEventLabel(); tickCountdown(); if(currentView==='gantt') renderGantt();
+}
 
-        function switchView(view) {
-            currentView = view;
-            const tBtn = document.getElementById('btn-view-table');
-            const gBtn = document.getElementById('btn-view-gantt');
-            const tCont = document.getElementById('view-table-container');
-            const gCont = document.getElementById('view-gantt-container');
+/* ============================ IMPORT / EXPORT ============================ */
+function exportJSON(){
+  const a=document.createElement('a');
+  a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(projectData,null,2));
+  a.download="paddock_planning.json"; a.click();
+}
+function exportCSV(){
+  const rows=[["Departement","Intervention","Responsable","Criticite","Debut","Fin","Avancement","Statut","Lien"]];
+  projectData.forEach(s=>s.tasks.forEach(t=> rows.push([s.rubrique,t.name,t.assignee||'',t.priority||'',t.start,t.end,t.progress+'%',t.status,t.link||''])));
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csv);
+  a.download="paddock_planning.csv"; a.click();
+}
+function importJSON(e){
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=ev=>{ try{ const d=JSON.parse(ev.target.result);
+      if(!Array.isArray(d)) throw 0;
+      projectData=d; persist(); resetForm(); renderAll();
+      alert("Planning importé.");
+    }catch(err){ alert("Fichier JSON invalide."); } };
+  r.readAsText(f,"UTF-8"); e.target.value='';
+}
+function resetDemo(){
+  if(!confirm("Restaurer les données de démonstration ? Le planning actuel sera remplacé.")) return;
+  projectData=structuredClone(DEMO); persist(); resetForm(); renderAll();
+}
 
-            if (view === 'table') {
-                tBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#238636] text-white transition-colors flex items-center gap-1.5 shadow-sm";
-                gBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#21262d] text-[#c9d1d9] border gh-border hover:bg-[#30363d] transition-colors flex items-center gap-1.5";
-                tCont.classList.remove('hidden');
-                gCont.classList.add('hidden');
-            } else {
-                gBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#238636] text-white transition-colors flex items-center gap-1.5 shadow-sm";
-                tBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#21262d] text-[#c9d1d9] border gh-border hover:bg-[#30363d] transition-colors flex items-center gap-1.5";
-                gCont.classList.remove('hidden');
-                tCont.classList.add('hidden');
-            }
-        }
+/* ============================ AUTHENTIFICATION (garde-fou UI) ============================ */
+function updateAuthUI(){
+  const panel=document.getElementById('admin-panel');
+  const badge=document.getElementById('role-badge');
+  const btn=document.getElementById('auth-btn'), txt=document.getElementById('auth-btn-text');
+  if(isAdmin){
+    panel.classList.remove('hidden');
+    badge.innerHTML='<span class="text-rosso">Ingénieur en chef (édition)</span>';
+    txt.innerText='Verrouiller'; btn.classList.add('!border-rosso','!text-rosso');
+    document.getElementById('race-name').value=race.name||'';
+    document.getElementById('race-date').value=race.date||'';
+  } else {
+    panel.classList.add('hidden');
+    badge.innerText='Lecture seule';
+    txt.innerText='Mode ingénieur'; btn.classList.remove('!border-rosso','!text-rosso');
+    resetForm();
+  }
+  renderView();
+}
+function toggleAuth(){
+  if(!isAdmin){
+    const p=prompt("Code d’accès ingénieur :");
+    if(p==="admin123"){ isAdmin=true; save('paddock.admin.v1',true); updateAuthUI(); }
+    else if(p!==null){ alert("Code incorrect."); }
+  } else { isAdmin=false; save('paddock.admin.v1',false); updateAuthUI(); }
+}
 
-        function filterStatus(status) {
-            currentFilter = status;
-            renderAll();
-        }
-
-        function handleFormSubmit(event) {
-            event.preventDefault();
-            const rubriqueName = document.getElementById('input-rubrique').value.trim();
-            const sIndex = document.getElementById('edit-section-index').value;
-            const tIndex = document.getElementById('edit-task-index').value;
-
-            const newTask = {
-                name: document.getElementById('input-name').value.trim(),
-                assignee: document.getElementById('input-assignee').value.trim(),
-                priority: document.getElementById('input-priority').value,
-                start: document.getElementById('input-start').value,
-                end: document.getElementById('input-end').value,
-                progress: parseInt(document.getElementById('input-progress').value),
-                link: document.getElementById('input-link').value.trim(),
-                status: document.getElementById('input-status').value
-            };
-
-            if (sIndex !== "" && tIndex !== "") {
-                const oldRubrique = projectData[sIndex].rubrique;
-                if (oldRubrique.toLowerCase() !== rubriqueName.toLowerCase()) {
-                    projectData[sIndex].tasks.splice(tIndex, 1);
-                    if (projectData[sIndex].tasks.length === 0) projectData.splice(sIndex, 1);
-
-                    let targetSection = projectData.find(s => s.rubrique.toLowerCase() === rubriqueName.toLowerCase());
-                    if (targetSection) {
-                        targetSection.tasks.push(newTask);
-                    } else {
-                        projectData.push({ rubrique: rubriqueName, tasks: [newTask] });
-                    }
-                } else {
-                    projectData[sIndex].tasks[tIndex] = newTask;
-                }
-            } else {
-                let section = projectData.find(s => s.rubrique.toLowerCase() === rubriqueName.toLowerCase());
-                if (section) {
-                    section.tasks.push(newTask);
-                } else {
-                    projectData.push({ rubrique: rubriqueName, tasks: [newTask] });
-                }
-            }
-
-            localStorage.setItem('motorsportProjectData', JSON.stringify(projectData));
-            resetForm();
-            renderAll();
-        }
-
-        function editTask(sIndex, tIndex) {
-            const task = projectData[sIndex].tasks[tIndex];
-            const rubrique = projectData[sIndex].rubrique;
-
-            document.getElementById('edit-section-index').value = sIndex;
-            document.getElementById('edit-task-index').value = tIndex;
-
-            document.getElementById('input-rubrique').value = rubrique;
-            document.getElementById('input-name').value = task.name;
-            document.getElementById('input-assignee').value = task.assignee || '';
-            document.getElementById('input-priority').value = task.priority || 'Normal';
-            document.getElementById('input-link').value = task.link;
-            document.getElementById('input-start').value = task.start;
-            document.getElementById('input-end').value = task.end;
-            document.getElementById('input-progress').value = task.progress;
-            document.getElementById('range-val').innerText = task.progress;
-            document.getElementById('input-status').value = task.status;
-
-            document.getElementById('form-title').innerHTML = `<span>✏️</span> Panneau Ingénieur / Admin : Modifier la Tâche`;
-            document.getElementById('submit-btn-text').innerText = "Enregistrer les modifications";
-            document.getElementById('cancel-edit-btn').classList.remove('hidden');
-
-            document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function resetForm() {
-            document.getElementById('task-form').reset();
-            document.getElementById('edit-section-index').value = "";
-            document.getElementById('edit-task-index').value = "";
-            document.getElementById('range-val').innerText = "50";
-            document.getElementById('form-title').innerHTML = `<span>⚙️</span> Panneau Ingénieur / Admin : Ajouter une Tâche`;
-            document.getElementById('submit-btn-text').innerText = "+ Ajouter la Tâche";
-            document.getElementById('cancel-edit-btn').classList.add('hidden');
-        }
-
-        function deleteTask(sIndex, tIndex) {
-            if (confirm("⚠️ Voulez-vous supprimer cette intervention du carnet de bord ?")) {
-                projectData[sIndex].tasks.splice(tIndex, 1);
-                if (projectData[sIndex].tasks.length === 0) projectData.splice(sIndex, 1);
-                localStorage.setItem('motorsportProjectData', JSON.stringify(projectData));
-                resetForm();
-                renderAll();
-            }
-        }
-
-        function exportJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "motorsport_planning.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importJSON(event) {
-            const fileReader = new FileReader();
-            if (event.target.files[0]) {
-                fileReader.readAsText(event.target.files[0], "UTF-8");
-                fileReader.onload = (e) => {
-                    try {
-                        projectData = JSON.parse(e.target.result);
-                        localStorage.setItem('motorsportProjectData', JSON.stringify(projectData));
-                        renderAll();
-                        alert("✅ Planning importé avec succès !");
-                    } catch (error) {
-                        alert("❌ Erreur lors de la lecture du fichier JSON.");
-                    }
-                };
-            }
-        }
-
-        function renderAll() {
-            renderTable();
-            renderGantt();
-        }
-
-        function renderTable() {
-            const container = document.getElementById('view-table-container');
-            let totalProgress = 0;
-            let taskCount = 0;
-
-            container.innerHTML = projectData.map((section, sIndex) => {
-                // Filtrer les tâches si un filtre est actif
-                const filteredTasks = section.tasks.map((t, idx) => ({ ...t, originalIndex: idx })).filter(task => {
-                    if (currentFilter === 'ALL') return true;
-                    return task.status === currentFilter;
-                });
-
-                if (filteredTasks.length === 0) return '';
-
-                return `
-                    <div class="gh-card rounded-lg overflow-hidden shadow-sm mb-6">
-                        <div class="bg-[#21262d] px-5 py-3.5 border-b gh-border flex justify-between items-center">
-                            <h2 class="text-xs font-extrabold uppercase tracking-wider text-gray-200 flex items-center gap-2">
-                                <span>🔧</span> ${section.rubrique}
-                            </h2>
-                            <span class="text-xs text-gray-400 bg-[#161b22] border gh-border px-2.5 py-0.5 rounded-full font-mono">${filteredTasks.length} tâche(s)</span>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="border-b gh-border text-xs text-gray-400 bg-[#161b22]/50">
-                                        <th class="py-3 px-5 font-semibold">Intervention</th>
-                                        <th class="py-3 px-5 font-semibold">Responsable</th>
-                                        <th class="py-3 px-5 font-semibold">Criticité</th>
-                                        <th class="py-3 px-5 font-semibold">Planning</th>
-                                        <th class="py-3 px-5 font-semibold">Statut</th>
-                                        <th class="py-3 px-5 font-semibold">Avancement</th>
-                                        <th class="py-3 px-5 font-semibold text-right">Ressource / Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-[#30363d] text-xs">
-                                    ${filteredTasks.map(task => {
-                                        totalProgress += task.progress;
-                                        taskCount++;
-                                        const tIndex = task.originalIndex;
-                                        const statusBadge = task.status === 'Prêt / Validé' 
-                                            ? 'bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40' 
-                                            : task.status === 'En cours' 
-                                            ? 'bg-[#9e6a03]/20 text-[#d29922] border border-[#9e6a03]/40' 
-                                            : 'bg-[#21262d] text-gray-400 border gh-border';
-
-                                        const priorityBadge = task.priority === 'Critique' 
-                                            ? 'bg-red-950/50 text-red-400 border border-red-800/50' 
-                                            : task.priority === 'Important' 
-                                            ? 'bg-amber-950/50 text-amber-400 border border-amber-800/50' 
-                                            : 'bg-gray-800 text-gray-300';
-
-                                        return `
-                                            <tr class="hover:bg-[#21262d]/50 transition-colors">
-                                                <td class="py-3.5 px-5 font-semibold text-white">${task.name}</td>
-                                                <td class="py-3.5 px-5 text-gray-300">${task.assignee || 'Non assigné'}</td>
-                                                <td class="py-3.5 px-5"><span class="px-2 py-0.5 rounded text-[10px] font-mono ${priorityBadge}">${task.priority || 'Normal'}</span></td>
-                                                <td class="py-3.5 px-5 text-gray-400 font-mono">${task.start} $\rightarrow$ ${task.end}</td>
-                                                <td class="py-3.5 px-5">
-                                                    <span class="px-2.5 py-1 font-medium rounded-md ${statusBadge}">${task.status}</span>
-                                                </td>
-                                                <td class="py-3.5 px-5 w-36">
-                                                    <div class="flex items-center gap-2">
-                                                        <div class="w-full bg-[#30363d] rounded-full h-2 overflow-hidden">
-                                                            <div class="bg-[#238636] h-2 rounded-full transition-all" style="width: ${task.progress}%"></div>
-                                                        </div>
-                                                        <span class="text-gray-400 font-mono text-[11px]">${task.progress}%</span>
-                                                    </div>
-                                                </td>
-                                                <td class="py-3.5 px-5 text-right flex items-center justify-end gap-2">
-                                                    <a href="${task.link}" target="_blank" class="text-[#58a6ff] hover:underline bg-[#21262d] border gh-border px-2.5 py-1 rounded-md font-medium">
-                                                        Lien ↗
-                                                    </a>
-                                                    ${isAdmin ? `
-                                                        <button onclick="editTask(${sIndex}, ${tIndex})" class="text-amber-400 hover:bg-amber-950/50 p-1.5 rounded-md transition-colors" title="Modifier">✏️</button>
-                                                        <button onclick="deleteTask(${sIndex}, ${tIndex})" class="text-red-400 hover:bg-red-950/50 p-1.5 rounded-md transition-colors" title="Supprimer">🗑️</button>
-                                                    ` : ''}
-                                                </td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            const globalAvg = taskCount > 0 ? Math.round(totalProgress / taskCount) : 0;
-            document.getElementById('global-progress').innerHTML = `
-                <span class="text-gray-400 block text-[10px] uppercase font-mono">Préparation Globale</span>
-                <span class="text-sm font-extrabold text-[#3fb950] font-mono">${globalAvg}%</span>
-            `;
-        }
-
-        function renderGantt() {
-            const container = document.getElementById('gantt-content');
-            
-            let allDates = [];
-            projectData.forEach(s => s.tasks.forEach(t => {
-                if(t.start) allDates.push(new Date(t.start));
-                if(t.end) allDates.push(new Date(t.end));
-            }));
-
-            if(allDates.length === 0) {
-                container.innerHTML = "<p class='text-xs text-gray-400'>Aucune tâche planifiée dans le calendrier paddock.</p>";
-                return;
-            }
-
-            let minDate = new Date(Math.min.apply(null, allDates));
-            let maxDate = new Date(Math.max.apply(null, allDates));
-            let totalDays = Math.max(1, Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24))) + 5;
-
-            container.innerHTML = projectData.map(section => `
-                <div class="border-b gh-border pb-5">
-                    <h3 class="text-xs font-extrabold text-gray-300 uppercase tracking-wider mb-3 bg-[#21262d] p-2.5 rounded-md flex items-center gap-2">
-                        <span>🏁</span> ${section.rubrique}
-                    </h3>
-                    <div class="space-y-3">
-                        ${section.tasks.map(task => {
-                            let tStart = new Date(task.start);
-                            let tEnd = new Date(task.end);
-                            let offsetDays = Math.max(0, Math.floor((tStart - minDate) / (1000 * 60 * 60 * 24)));
-                            let durationDays = Math.max(1, Math.ceil((tEnd - tStart) / (1000 * 60 * 60 * 24)));
-
-                            let leftPercent = (offsetDays / totalDays) * 100;
-                            let widthPercent = Math.min(100 - leftPercent, (durationDays / totalDays) * 100);
-
-                            return `
-                                <div class="grid grid-cols-1 md:grid-cols-4 items-center text-xs gap-3">
-                                    <div class="font-medium text-gray-200 truncate" title="${task.name}">${task.name} <span class="text-[10px] text-gray-400">(${task.assignee || 'N/A'})</span></div>
-                                    <div class="md:col-span-3 bg-[#0d1117] rounded-md h-7 relative overflow-hidden border gh-border flex items-center shadow-inner">
-                                        <div class="absolute h-full bg-[#238636]/30 border border-[#238636] rounded-sm flex items-center justify-between px-3 text-[11px] font-bold text-[#3fb950]" 
-                                             style="left: ${leftPercent}%; width: max(12%, ${widthPercent}%);">
-                                            <span class="truncate">${task.progress}%</span>
-                                            <span class="text-[10px] text-gray-300 font-mono hidden sm:inline">${task.start} $\rightarrow$ ${task.end}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        updateAuthUI();
-    </script>
+/* ============================ INIT ============================ */
+refreshEventLabel();
+tickCountdown(); setInterval(tickCountdown, 1000);
+populateDeptControls();
+renderHero();
+updateAuthUI();     // définit aussi la vue initiale
+switchView('board');
+</script>
 </body>
 </html>
