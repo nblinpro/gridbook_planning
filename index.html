@@ -196,6 +196,18 @@
       <button class="btn btn-primary" onclick="saveRace()">Appliquer</button>
     </div>
 
+    <!-- Gestion des départements -->
+    <div class="px-5 py-4 border-b border-line">
+      <h3 class="font-display font-bold text-white text-sm mb-3 flex items-center gap-2">🗂️ Départements</h3>
+      <div id="dept-manager" class="space-y-2"></div>
+      <div class="flex gap-2 mt-3">
+        <input id="new-dept" class="in flex-1" placeholder="Nouveau département — ex : Sécurité & extinction"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addDept();}">
+        <button class="btn" onclick="addDept()">+ Ajouter</button>
+      </div>
+      <p class="text-[11px] text-mute mt-2">Renommer répercute le changement sur toutes les tâches du département. Les flèches modifient l’ordre d’affichage partout (tableau, Gantt, filtres).</p>
+    </div>
+
     <form id="task-form" onsubmit="handleFormSubmit(event)" class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
       <input type="hidden" id="edit-s"><input type="hidden" id="edit-t">
       <div>
@@ -682,13 +694,62 @@ function switchView(v){
   document.getElementById('controls').classList.toggle('hidden', v==='board');
   renderView();
 }
-function renderAll(){ renderHero(); renderView(); populateDeptControls(); }
+function renderAll(){ renderHero(); renderView(); populateDeptControls(); renderDeptManager(); }
 
 function populateDeptControls(){
   const names = projectData.map(s=>s.rubrique);
+  if(filters.dept!=='ALL' && !names.includes(filters.dept)) filters.dept='ALL';
   document.getElementById('rub-list').innerHTML = names.map(n=>`<option value="${esc(n)}">`).join('');
   const sel=document.getElementById('fltDept'), keep=filters.dept;
   sel.innerHTML = `<option value="ALL">Tous départements</option>` + names.map(n=>`<option${n===keep?' selected':''}>${esc(n)}</option>`).join('');
+}
+
+/* ============================ GESTION DES DÉPARTEMENTS ============================ */
+function renderDeptManager(){
+  const el=document.getElementById('dept-manager'); if(!el) return;
+  if(!projectData.length){ el.innerHTML='<p class="text-xs text-mute">Aucun département — ajoutes-en un ci-dessous.</p>'; return; }
+  const last=projectData.length-1;
+  el.innerHTML = projectData.map((sec,i)=>`
+    <div class="flex items-center gap-2">
+      <input class="in flex-1" value="${esc(sec.rubrique)}" aria-label="Nom du département"
+             onchange="renameDept(${i}, this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+      <span class="badge bg-surface text-mute border-line shrink-0" title="Nombre de tâches">${sec.tasks.length}</span>
+      <button class="btn !px-2.5 !py-2 disabled:opacity-40 disabled:pointer-events-none" onclick="moveDept(${i},-1)" ${i===0?'disabled':''} title="Monter" aria-label="Monter">↑</button>
+      <button class="btn !px-2.5 !py-2 disabled:opacity-40 disabled:pointer-events-none" onclick="moveDept(${i},1)" ${i===last?'disabled':''} title="Descendre" aria-label="Descendre">↓</button>
+      <button class="btn !px-2.5 !py-2 !text-rosso" onclick="deleteDept(${i})" title="Supprimer" aria-label="Supprimer">🗑️</button>
+    </div>`).join('');
+}
+function deptExists(name, exceptIdx){
+  const n=name.trim().toLowerCase();
+  return projectData.some((s,i)=> i!==exceptIdx && s.rubrique.trim().toLowerCase()===n);
+}
+function renameDept(i, val){
+  const name=(val||'').trim();
+  if(!name){ alert("Le nom d’un département ne peut pas être vide."); renderDeptManager(); return; }
+  if(deptExists(name, i)){ alert("Un département porte déjà ce nom."); renderDeptManager(); return; }
+  if(filters.dept===projectData[i].rubrique) filters.dept=name;
+  projectData[i].rubrique=name; persist(); renderAll();
+}
+function moveDept(i, dir){
+  const j=i+dir; if(j<0 || j>=projectData.length) return;
+  [projectData[i], projectData[j]] = [projectData[j], projectData[i]];
+  persist(); resetForm(); renderAll();
+}
+function addDept(){
+  const inp=document.getElementById('new-dept'); const name=inp.value.trim();
+  if(!name){ inp.focus(); return; }
+  if(deptExists(name, -1)){ alert("Ce département existe déjà."); return; }
+  projectData.push({ rubrique:name, tasks:[] });
+  inp.value=''; persist(); renderAll();
+}
+function deleteDept(i){
+  const sec=projectData[i]; const n=sec.tasks.length;
+  const msg = n>0
+    ? `Supprimer « ${sec.rubrique} » et ses ${n} tâche(s) ? Action irréversible.`
+    : `Supprimer le département « ${sec.rubrique} » ?`;
+  if(!confirm(msg)) return;
+  if(filters.dept===sec.rubrique) filters.dept='ALL';
+  projectData.splice(i,1); persist(); resetForm(); renderAll();
 }
 
 /* ============================ FORMULAIRE ADMIN ============================ */
@@ -810,6 +871,7 @@ function updateAuthUI(){
     txt.innerText='Mode ingénieur'; btn.classList.remove('!border-rosso','!text-rosso');
     resetForm();
   }
+  renderDeptManager();
   renderView();
 }
 function toggleAuth(){
