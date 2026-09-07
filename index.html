@@ -3,135 +3,279 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suivi de Projet - Admin & User</title>
+    <title>Motorsport Racing - Gridbook Project & Gantt Management</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+        .gh-btn-red { background-color: #da3633; color: #ffffff; }
+        .gh-btn-red:hover { background-color: #b62324; }
+        .gh-btn-green { background-color: #238636; color: #ffffff; }
+        .gh-btn-green:hover { background-color: #2ea043; }
+        .gh-border { border-color: #30363d; }
+        .gh-card { background-color: #161b22; border: 1px solid #30363d; }
+        .gh-input { background-color: #0d1117; border: 1px solid #30363d; color: #c9d1d9; }
+        .gh-input:focus { border-color: #58a6ff; outline: none; box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3); }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+<body class="antialiased pb-16">
 
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- En-tête -->
-        <header class="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-4 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-slate-800">Tableau de Bord & Suivi de Projet</h1>
-                <p class="text-sm text-gray-500 mt-1">Mode actuel : <span id="role-badge" class="font-semibold text-blue-600">Utilisateur (Lecture seule)</span></p>
+    <!-- En-tête style Paddock Racing / GitHub Dark -->
+    <header class="bg-[#161b22] border-b gh-border py-4 px-6 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-600 p-2 rounded-lg text-white font-black tracking-wider text-sm flex items-center gap-1 shadow-inner">
+                    🏎️ GRIDBOOK
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white flex items-center gap-2">
+                        Paddock Racing Management <span class="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-mono">v3.0 Pro</span>
+                    </h1>
+                    <p class="text-xs text-gray-400">Planification technique, préparation véhicules & logistique de course</p>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <div id="global-progress" class="text-right hidden sm:block"></div>
-                <!-- Bouton Connexion / Déconnexion Admin -->
-                <button id="auth-btn" onclick="toggleAuth()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
-                    Mode Admin
+            <div class="flex items-center gap-4 flex-wrap">
+                <!-- Widget Compte à rebours Course -->
+                <div id="race-countdown" class="text-xs bg-[#21262d] px-3 py-1.5 rounded-md border gh-border font-mono text-amber-400 flex items-center gap-1.5">
+                    <span>⏳ Prochaine Course :</span> <span id="countdown-timer" class="font-bold">--d --h --m</span>
+                </div>
+                <div id="global-progress" class="text-right text-xs bg-[#21262d] px-3 py-1.5 rounded-md border gh-border"></div>
+                <button id="auth-btn" onclick="toggleAuth()" class="bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-semibold px-3.5 py-2 rounded-md border gh-border transition-all flex items-center gap-1.5 shadow-sm">
+                    🔒 <span id="auth-btn-text">Mode Admin</span>
                 </button>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- Panneau d'administration (Masqué par défaut) -->
-        <div id="admin-panel" class="hidden mb-8 bg-white p-6 rounded-xl shadow-sm border border-amber-200 bg-amber-50/30">
-            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <span>🛠️</span> Panneau d'Administration - Ajouter une tâche
-            </h2>
-            <form id="task-form" onsubmit="addTask(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <main class="max-w-7xl mx-auto px-4 mt-8">
+
+        <!-- Barre de navigation des Vues & Filtres rapides -->
+        <div class="flex flex-col lg:flex-row justify-between items-center mb-6 gap-4 border-b gh-border pb-4">
+            <div class="flex flex-wrap gap-2 items-center">
+                <button onclick="switchView('table')" id="btn-view-table" class="px-4 py-2 text-xs font-semibold rounded-md bg-[#238636] text-white transition-colors flex items-center gap-1.5 shadow-sm">
+                    📋 Tableau & Rubriques
+                </button>
+                <button onclick="switchView('gantt')" id="btn-view-gantt" class="px-4 py-2 text-xs font-semibold rounded-md bg-[#21262d] text-[#c9d1d9] border gh-border hover:bg-[#30363d] transition-colors flex items-center gap-1.5">
+                    📊 Diagramme Gantt
+                </button>
+                <!-- Filtres rapides -->
+                <div class="hidden sm:flex items-center gap-1 ml-4 bg-[#161b22] border gh-border rounded-md p-1">
+                    <span class="text-[10px] text-gray-400 px-2 uppercase font-mono">Filtre :</span>
+                    <button onclick="filterStatus('ALL')" class="px-2.5 py-1 text-xs rounded text-gray-300 hover:bg-[#21262d] font-medium" id="filter-all">Tous</button>
+                    <button onclick="filterStatus('En cours')" class="px-2.5 py-1 text-xs rounded text-amber-400 hover:bg-[#21262d] font-medium" id="filter-inprogress">En cours</button>
+                    <button onclick="filterStatus('Prêt / Validé')" class="px-2.5 py-1 text-xs rounded text-emerald-400 hover:bg-[#21262d] font-medium" id="filter-ready">Validés</button>
+                </div>
+            </div>
+            <div class="text-xs text-gray-400 flex items-center gap-2">
+                <span>Rôle actif :</span> <span id="role-badge" class="font-bold text-gray-200">Utilisateur (Lecture seule)</span>
+            </div>
+        </div>
+
+        <!-- Panneau d'administration sécurisé (Masqué par défaut) -->
+        <div id="admin-panel" class="hidden mb-8 gh-card p-6 rounded-lg shadow-lg border-l-4 border-l-red-600 bg-[#161b22]">
+            <div class="flex justify-between items-center mb-4 border-b gh-border pb-3">
+                <h2 id="form-title" class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wide">
+                    <span>⚙️</span> Panneau Ingénieur / Admin : Ajouter une Tâche
+                </h2>
+                <div class="flex items-center gap-2">
+                    <button onclick="exportJSON()" class="text-[11px] text-blue-400 bg-blue-950/50 border border-blue-800/50 px-2.5 py-1 rounded font-mono hover:bg-blue-900/40">📥 Exporter JSON</button>
+                    <label class="text-[11px] text-emerald-400 bg-emerald-950/50 border border-emerald-800/50 px-2.5 py-1 rounded font-mono cursor-pointer hover:bg-emerald-900/40">
+                        📤 Importer <input type="file" accept=".json" onchange="importJSON(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+            <form id="task-form" onsubmit="handleFormSubmit(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="hidden" id="edit-section-index" value="">
+                <input type="hidden" id="edit-task-index" value="">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Rubrique</label>
-                    <input type="text" id="input-rubrique" placeholder="Ex: Infrastructure & DevOps" required class="w-full text-sm border border-gray-300 rounded-lg p-2.5 bg-white">
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Rubrique / Département</label>
+                    <input type="text" id="input-rubrique" placeholder="Ex: Moteur & Powertrain" required class="w-full text-xs gh-input rounded-md p-2.5">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Nom de la Tâche</label>
-                    <input type="text" id="input-name" placeholder="Ex: Déploiement Cluster" required class="w-full text-sm border border-gray-300 rounded-lg p-2.5 bg-white">
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Intitulé de la Tâche</label>
+                    <input type="text" id="input-name" placeholder="Ex: Révision turbo & cartographie" required class="w-full text-xs gh-input rounded-md p-2.5">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Lien d'avancement</label>
-                    <input type="url" id="input-link" placeholder="https://..." required class="w-full text-sm border border-gray-300 rounded-lg p-2.5 bg-white">
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Responsable / Mécanicien</label>
+                    <input type="text" id="input-assignee" placeholder="Ex: Jean (Moteur)" required class="w-full text-xs gh-input rounded-md p-2.5">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Date Début / Fin</label>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Lien d'avancement (Git, Jira, Telemetry)</label>
+                    <input type="url" id="input-link" placeholder="https://github.com/nblinpro/..." required class="w-full text-xs gh-input rounded-md p-2.5">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Planning (Début / Fin)</label>
                     <div class="flex gap-2">
-                        <input type="date" id="input-start" required class="w-1/2 text-sm border border-gray-300 rounded-lg p-2 bg-white">
-                        <input type="date" id="input-end" required class="w-1/2 text-sm border border-gray-300 rounded-lg p-2 bg-white">
+                        <input type="date" id="input-start" required class="w-1/2 text-xs gh-input rounded-md p-2">
+                        <input type="date" id="input-end" required class="w-1/2 text-xs gh-input rounded-md p-2">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Avancement (%) : <span id="range-val">50</span>%</label>
-                    <input type="range" id="input-progress" min="0" max="100" value="50" oninput="document.getElementById('range-val').innerText = this.value" class="w-full mt-2">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Statut</label>
-                    <select id="input-status" class="w-full text-sm border border-gray-300 rounded-lg p-2.5 bg-white">
-                        <option value="À faire">À faire</option>
-                        <option value="En cours">En cours</option>
-                        <option value="Terminé">Terminé</option>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Niveau de Criticité</label>
+                    <select id="input-priority" class="w-full text-xs gh-input rounded-md p-2.5">
+                        <option value="Normal">🟢 Normal</option>
+                        <option value="Important">🟠 Important</option>
+                        <option value="Critique">🔴 Critique / Bloquant</option>
                     </select>
                 </div>
-                <div class="md:col-span-3 flex justify-end">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
-                        Ajouter la tâche au projet
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Avancement (%) : <span id="range-val" class="text-red-400 font-bold">50</span>%</label>
+                    <input type="range" id="input-progress" min="0" max="100" value="50" oninput="document.getElementById('range-val').innerText = this.value" class="w-full mt-2 accent-red-600 cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1">Statut Atelier</label>
+                    <select id="input-status" class="w-full text-xs gh-input rounded-md p-2.5">
+                        <option value="À planifier">À planifier</option>
+                        <option value="En cours">En cours</option>
+                        <option value="Prêt / Validé">Prêt / Validé</option>
+                    </select>
+                </div>
+                <div class="md:col-span-3 flex justify-end gap-3 pt-2">
+                    <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden bg-[#21262d] hover:bg-[#30363d] text-gray-300 text-xs font-bold px-4 py-2 rounded-md transition-all border gh-border">
+                        Annuler
+                    </button>
+                    <button type="submit" id="submit-btn-text" class="gh-btn-red text-xs font-bold px-5 py-2 rounded-md transition-all shadow-sm flex items-center gap-1.5">
+                        + Ajouter la Tâche
                     </button>
                 </div>
             </form>
         </div>
 
-        <!-- Conteneur des Rubriques et Tâches -->
-        <main id="project-container" class="space-y-8">
-            <!-- Injecté par JavaScript -->
-        </main>
-    </div>
+        <!-- Conteneur Vue Tableau -->
+        <div id="view-table-container" class="space-y-6">
+            <!-- Injecté par JS -->
+        </div>
+
+        <!-- Conteneur Vue Gantt -->
+        <div id="view-gantt-container" class="hidden gh-card rounded-lg p-6 overflow-x-auto shadow-md">
+            <div class="flex justify-between items-center mb-6 border-b gh-border pb-3">
+                <h2 class="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
+                    <span>📈</span> Chronogramme & Planning Paddock (Gantt)
+                </h2>
+                <span class="text-xs text-gray-400">Échelle dynamique basée sur les échéances des courses</span>
+            </div>
+            <div id="gantt-content" class="min-w-[800px] space-y-6">
+                <!-- Injecté par JS -->
+            </div>
+        </div>
+
+    </main>
 
     <script>
-        // Données initiales (chargées depuis le localStorage si présentes, sinon par défaut)
-        let projectData = JSON.parse(localStorage.getItem('projectData')) || [
+        let projectData = JSON.parse(localStorage.getItem('motorsportProjectData')) || [
             {
-                rubrique: "Infrastructure & DevOps",
+                rubrique: "Moteur & Powertrain",
                 tasks: [
-                    { name: "Configuration Proxmox & Ceph", start: "2026-03-01", end: "2026-03-15", progress: 100, link: "https://github.com", status: "Terminé" },
-                    { name: "Déploiement Cluster Kubernetes", start: "2026-03-16", end: "2026-03-30", progress: 60, link: "https://gitlab.com", status: "En cours" }
+                    { name: "Reconditionnement complet V8 Bi-turbo", assignee: "Marc (Ingénieur)", priority: "Critique", start: "2026-06-01", end: "2026-06-14", progress: 100, link: "https://github.com/nblinpro", status: "Prêt / Validé" },
+                    { name: "Calibration cartographie injection & banc dyno", assignee: "Thomas (Élec)", priority: "Important", start: "2026-06-15", end: "2026-06-22", progress: 75, link: "https://github.com/nblinpro", status: "En cours" }
+                ]
+            },
+            {
+                rubrique: "Châssis & Aérodynamique",
+                tasks: [
+                    { name: "Contrôle géométrie trains roulants & carrossage", assignee: "Lucas (Mécanicien)", priority: "Normal", start: "2026-06-10", end: "2026-06-18", progress: 50, link: "https://github.com/nblinpro", status: "En cours" }
                 ]
             }
         ];
 
-        let isAdmin = localStorage.getItem('isAdmin') === 'true';
+        let isAdmin = localStorage.getItem('motorsportAdmin') === 'true';
+        let currentView = 'table';
+        let currentFilter = 'ALL';
+
+        // Date cible de la prochaine course (Ex: 24h du Mans ou prochaine manche)
+        const raceDate = new Date("2026-07-15T14:00:00").getTime();
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = raceDate - now;
+
+            if (distance < 0) {
+                document.getElementById('countdown-timer').innerText = "Course en cours / Passée !";
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+            document.getElementById('countdown-timer').innerText = `${days}j ${hours}h ${minutes}m`;
+        }
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
 
         function updateAuthUI() {
             const panel = document.getElementById('admin-panel');
             const badge = document.getElementById('role-badge');
+            const btnText = document.getElementById('auth-btn-text');
             const btn = document.getElementById('auth-btn');
 
             if (isAdmin) {
                 panel.classList.remove('hidden');
-                badge.innerText = "Administrateur (Mode Édition)";
-                badge.className = "font-semibold text-amber-600";
-                btn.innerText = "Se déconnecter";
-                btn.className = "bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors";
+                badge.innerHTML = "<span class='text-red-400 font-mono bg-red-950/40 px-2 py-0.5 rounded border border-red-800/40'>Administrateur / Ingénieur Chef (Mode Édition)</span>";
+                btnText.innerText = "Verrouiller Admin";
+                btn.className = "bg-red-900/40 hover:bg-red-900/60 text-red-200 text-xs font-semibold px-3.5 py-2 rounded-md border border-red-700 transition-all flex items-center gap-1.5 shadow-sm";
             } else {
                 panel.classList.add('hidden');
                 badge.innerText = "Utilisateur (Lecture seule)";
-                badge.className = "font-semibold text-blue-600";
-                btn.innerText = "Mode Admin";
-                btn.className = "bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors";
+                btnText.innerText = "Mode Admin";
+                btn.className = "bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-semibold px-3.5 py-2 rounded-md border gh-border transition-all flex items-center gap-1.5 shadow-sm";
+                resetForm();
             }
+            renderAll();
         }
 
         function toggleAuth() {
             if (!isAdmin) {
-                const password = prompt("Entrez le mot de passe administrateur :");
-                // Mot de passe simple pour l'exemple (à modifier)
+                const password = prompt("🔐 Entrez le code d'accès administrateur / ingénieur :");
                 if (password === "admin123") {
                     isAdmin = true;
-                    localStorage.setItem('isAdmin', 'true');
+                    localStorage.setItem('motorsportAdmin', 'true');
                     updateAuthUI();
                 } else if (password !== null) {
-                    alert("Mot de passe incorrect.");
+                    alert("❌ Code d'accès erroné.");
                 }
             } else {
                 isAdmin = false;
-                localStorage.setItem('isAdmin', 'false');
+                localStorage.setItem('motorsportAdmin', 'false');
                 updateAuthUI();
             }
         }
 
-        function addTask(event) {
+        function switchView(view) {
+            currentView = view;
+            const tBtn = document.getElementById('btn-view-table');
+            const gBtn = document.getElementById('btn-view-gantt');
+            const tCont = document.getElementById('view-table-container');
+            const gCont = document.getElementById('view-gantt-container');
+
+            if (view === 'table') {
+                tBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#238636] text-white transition-colors flex items-center gap-1.5 shadow-sm";
+                gBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#21262d] text-[#c9d1d9] border gh-border hover:bg-[#30363d] transition-colors flex items-center gap-1.5";
+                tCont.classList.remove('hidden');
+                gCont.classList.add('hidden');
+            } else {
+                gBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#238636] text-white transition-colors flex items-center gap-1.5 shadow-sm";
+                tBtn.className = "px-4 py-2 text-xs font-semibold rounded-md bg-[#21262d] text-[#c9d1d9] border gh-border hover:bg-[#30363d] transition-colors flex items-center gap-1.5";
+                gCont.classList.remove('hidden');
+                tCont.classList.add('hidden');
+            }
+        }
+
+        function filterStatus(status) {
+            currentFilter = status;
+            renderAll();
+        }
+
+        function handleFormSubmit(event) {
             event.preventDefault();
             const rubriqueName = document.getElementById('input-rubrique').value.trim();
+            const sIndex = document.getElementById('edit-section-index').value;
+            const tIndex = document.getElementById('edit-task-index').value;
+
             const newTask = {
                 name: document.getElementById('input-name').value.trim(),
+                assignee: document.getElementById('input-assignee').value.trim(),
+                priority: document.getElementById('input-priority').value,
                 start: document.getElementById('input-start').value,
                 end: document.getElementById('input-end').value,
                 progress: parseInt(document.getElementById('input-progress').value),
@@ -139,106 +283,259 @@
                 status: document.getElementById('input-status').value
             };
 
-            // Chercher si la rubrique existe déjà
-            let section = projectData.find(s => s.rubrique.toLowerCase() === rubriqueName.toLowerCase());
-            if (section) {
-                section.tasks.push(newTask);
-            } else {
-                projectData.push({
-                    rubrique: rubriqueName,
-                    tasks: [newTask]
-                });
-            }
+            if (sIndex !== "" && tIndex !== "") {
+                const oldRubrique = projectData[sIndex].rubrique;
+                if (oldRubrique.toLowerCase() !== rubriqueName.toLowerCase()) {
+                    projectData[sIndex].tasks.splice(tIndex, 1);
+                    if (projectData[sIndex].tasks.length === 0) projectData.splice(sIndex, 1);
 
-            // Sauvegarde locale
-            localStorage.setItem('projectData', JSON.stringify(projectData));
-            
-            // Reset formulaire et re-rendu
-            document.getElementById('task-form').reset();
-            document.getElementById('range-val').innerText = "50";
-            renderProject();
-            alert("Tâche ajoutée avec succès !");
-        }
-
-        function deleteTask(rubriqueIndex, taskIndex) {
-            if (confirm("Voulez-vous vraiment supprimer cette tâche ?")) {
-                projectData[rubriqueIndex].tasks.splice(taskIndex, 1);
-                // Si la rubrique est vide, on peut la supprimer
-                if (projectData[rubriqueIndex].tasks.length === 0) {
-                    projectData.splice(rubriqueIndex, 1);
+                    let targetSection = projectData.find(s => s.rubrique.toLowerCase() === rubriqueName.toLowerCase());
+                    if (targetSection) {
+                        targetSection.tasks.push(newTask);
+                    } else {
+                        projectData.push({ rubrique: rubriqueName, tasks: [newTask] });
+                    }
+                } else {
+                    projectData[sIndex].tasks[tIndex] = newTask;
                 }
-                localStorage.setItem('projectData', JSON.stringify(projectData));
-                renderProject();
+            } else {
+                let section = projectData.find(s => s.rubrique.toLowerCase() === rubriqueName.toLowerCase());
+                if (section) {
+                    section.tasks.push(newTask);
+                } else {
+                    projectData.push({ rubrique: rubriqueName, tasks: [newTask] });
+                }
+            }
+
+            localStorage.setItem('motorsportProjectData', JSON.stringify(projectData));
+            resetForm();
+            renderAll();
+        }
+
+        function editTask(sIndex, tIndex) {
+            const task = projectData[sIndex].tasks[tIndex];
+            const rubrique = projectData[sIndex].rubrique;
+
+            document.getElementById('edit-section-index').value = sIndex;
+            document.getElementById('edit-task-index').value = tIndex;
+
+            document.getElementById('input-rubrique').value = rubrique;
+            document.getElementById('input-name').value = task.name;
+            document.getElementById('input-assignee').value = task.assignee || '';
+            document.getElementById('input-priority').value = task.priority || 'Normal';
+            document.getElementById('input-link').value = task.link;
+            document.getElementById('input-start').value = task.start;
+            document.getElementById('input-end').value = task.end;
+            document.getElementById('input-progress').value = task.progress;
+            document.getElementById('range-val').innerText = task.progress;
+            document.getElementById('input-status').value = task.status;
+
+            document.getElementById('form-title').innerHTML = `<span>✏️</span> Panneau Ingénieur / Admin : Modifier la Tâche`;
+            document.getElementById('submit-btn-text').innerText = "Enregistrer les modifications";
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('task-form').reset();
+            document.getElementById('edit-section-index').value = "";
+            document.getElementById('edit-task-index').value = "";
+            document.getElementById('range-val').innerText = "50";
+            document.getElementById('form-title').innerHTML = `<span>⚙️</span> Panneau Ingénieur / Admin : Ajouter une Tâche`;
+            document.getElementById('submit-btn-text').innerText = "+ Ajouter la Tâche";
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+        }
+
+        function deleteTask(sIndex, tIndex) {
+            if (confirm("⚠️ Voulez-vous supprimer cette intervention du carnet de bord ?")) {
+                projectData[sIndex].tasks.splice(tIndex, 1);
+                if (projectData[sIndex].tasks.length === 0) projectData.splice(sIndex, 1);
+                localStorage.setItem('motorsportProjectData', JSON.stringify(projectData));
+                resetForm();
+                renderAll();
             }
         }
 
-        function renderProject() {
-            const container = document.getElementById('project-container');
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projectData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "motorsport_planning.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSON(event) {
+            const fileReader = new FileReader();
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0], "UTF-8");
+                fileReader.onload = (e) => {
+                    try {
+                        projectData = JSON.parse(e.target.result);
+                        localStorage.setItem('motorsportProjectData', JSON.stringify(projectData));
+                        renderAll();
+                        alert("✅ Planning importé avec succès !");
+                    } catch (error) {
+                        alert("❌ Erreur lors de la lecture du fichier JSON.");
+                    }
+                };
+            }
+        }
+
+        function renderAll() {
+            renderTable();
+            renderGantt();
+        }
+
+        function renderTable() {
+            const container = document.getElementById('view-table-container');
             let totalProgress = 0;
             let taskCount = 0;
 
-            container.innerHTML = projectData.map((section, sIndex) => `
-                <section class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="bg-slate-100 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                        <h2 class="text-lg font-semibold text-slate-700">${section.rubrique}</h2>
-                        <span class="text-xs text-gray-500 font-medium">${section.tasks.length} tâche(s)</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-50/50">
-                                    <th class="py-3 px-6">Tâche</th>
-                                    <th class="py-3 px-6">Planning</th>
-                                    <th class="py-3 px-6">Statut</th>
-                                    <th class="py-3 px-6">Avancement</th>
-                                    <th class="py-3 px-6 text-right">Ressource / Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 text-sm">
-                                ${section.tasks.map((task, tIndex) => {
-                                    totalProgress += task.progress;
-                                    taskCount++;
-                                    const statusColor = task.status === 'Terminé' ? 'bg-green-100 text-green-700' : task.status === 'En cours' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600';
-                                    return `
-                                        <tr class="hover:bg-gray-50/80 transition-colors">
-                                            <td class="py-4 px-6 font-medium text-slate-800">${task.name}</td>
-                                            <td class="py-4 px-6 text-gray-500 text-xs">${task.start} $\rightarrow$ ${task.end}</td>
-                                            <td class="py-4 px-6">
-                                                <span class="px-2.5 py-1 text-xs font-medium rounded-full ${statusColor}">${task.status}</span>
-                                            </td>
-                                            <td class="py-4 px-6 w-48">
-                                                <div class="flex items-center gap-2">
-                                                    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                                        <div class="bg-blue-600 h-2 rounded-full" style="width: ${task.progress}%"></div>
+            container.innerHTML = projectData.map((section, sIndex) => {
+                // Filtrer les tâches si un filtre est actif
+                const filteredTasks = section.tasks.map((t, idx) => ({ ...t, originalIndex: idx })).filter(task => {
+                    if (currentFilter === 'ALL') return true;
+                    return task.status === currentFilter;
+                });
+
+                if (filteredTasks.length === 0) return '';
+
+                return `
+                    <div class="gh-card rounded-lg overflow-hidden shadow-sm mb-6">
+                        <div class="bg-[#21262d] px-5 py-3.5 border-b gh-border flex justify-between items-center">
+                            <h2 class="text-xs font-extrabold uppercase tracking-wider text-gray-200 flex items-center gap-2">
+                                <span>🔧</span> ${section.rubrique}
+                            </h2>
+                            <span class="text-xs text-gray-400 bg-[#161b22] border gh-border px-2.5 py-0.5 rounded-full font-mono">${filteredTasks.length} tâche(s)</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="border-b gh-border text-xs text-gray-400 bg-[#161b22]/50">
+                                        <th class="py-3 px-5 font-semibold">Intervention</th>
+                                        <th class="py-3 px-5 font-semibold">Responsable</th>
+                                        <th class="py-3 px-5 font-semibold">Criticité</th>
+                                        <th class="py-3 px-5 font-semibold">Planning</th>
+                                        <th class="py-3 px-5 font-semibold">Statut</th>
+                                        <th class="py-3 px-5 font-semibold">Avancement</th>
+                                        <th class="py-3 px-5 font-semibold text-right">Ressource / Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#30363d] text-xs">
+                                    ${filteredTasks.map(task => {
+                                        totalProgress += task.progress;
+                                        taskCount++;
+                                        const tIndex = task.originalIndex;
+                                        const statusBadge = task.status === 'Prêt / Validé' 
+                                            ? 'bg-[#238636]/20 text-[#3fb950] border border-[#238636]/40' 
+                                            : task.status === 'En cours' 
+                                            ? 'bg-[#9e6a03]/20 text-[#d29922] border border-[#9e6a03]/40' 
+                                            : 'bg-[#21262d] text-gray-400 border gh-border';
+
+                                        const priorityBadge = task.priority === 'Critique' 
+                                            ? 'bg-red-950/50 text-red-400 border border-red-800/50' 
+                                            : task.priority === 'Important' 
+                                            ? 'bg-amber-950/50 text-amber-400 border border-amber-800/50' 
+                                            : 'bg-gray-800 text-gray-300';
+
+                                        return `
+                                            <tr class="hover:bg-[#21262d]/50 transition-colors">
+                                                <td class="py-3.5 px-5 font-semibold text-white">${task.name}</td>
+                                                <td class="py-3.5 px-5 text-gray-300">${task.assignee || 'Non assigné'}</td>
+                                                <td class="py-3.5 px-5"><span class="px-2 py-0.5 rounded text-[10px] font-mono ${priorityBadge}">${task.priority || 'Normal'}</span></td>
+                                                <td class="py-3.5 px-5 text-gray-400 font-mono">${task.start} $\rightarrow$ ${task.end}</td>
+                                                <td class="py-3.5 px-5">
+                                                    <span class="px-2.5 py-1 font-medium rounded-md ${statusBadge}">${task.status}</span>
+                                                </td>
+                                                <td class="py-3.5 px-5 w-36">
+                                                    <div class="flex items-center gap-2">
+                                                        <div class="w-full bg-[#30363d] rounded-full h-2 overflow-hidden">
+                                                            <div class="bg-[#238636] h-2 rounded-full transition-all" style="width: ${task.progress}%"></div>
+                                                        </div>
+                                                        <span class="text-gray-400 font-mono text-[11px]">${task.progress}%</span>
                                                     </div>
-                                                    <span class="text-xs text-gray-500 font-mono">${task.progress}%</span>
-                                                </div>
-                                            </td>
-                                            <td class="py-4 px-6 text-right flex items-center justify-end gap-2">
-                                                <a href="${task.link}" target="_blank" class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
-                                                    Lien $\rightarrow$
-                                                </a>
-                                                ${isAdmin ? `<button onclick="deleteTask(${sIndex}, ${tIndex})" class="text-xs text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition-colors" title="Supprimer">🗑️</button>` : ''}
-                                            </td>
-                                        </tr>
-                                    `;
-                                }).join('')}
-                            </tbody>
-                        </table>
+                                                </td>
+                                                <td class="py-3.5 px-5 text-right flex items-center justify-end gap-2">
+                                                    <a href="${task.link}" target="_blank" class="text-[#58a6ff] hover:underline bg-[#21262d] border gh-border px-2.5 py-1 rounded-md font-medium">
+                                                        Lien ↗
+                                                    </a>
+                                                    ${isAdmin ? `
+                                                        <button onclick="editTask(${sIndex}, ${tIndex})" class="text-amber-400 hover:bg-amber-950/50 p-1.5 rounded-md transition-colors" title="Modifier">✏️</button>
+                                                        <button onclick="deleteTask(${sIndex}, ${tIndex})" class="text-red-400 hover:bg-red-950/50 p-1.5 rounded-md transition-colors" title="Supprimer">🗑️</button>
+                                                    ` : ''}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </section>
-            `).join('');
+                `;
+            }).join('');
 
             const globalAvg = taskCount > 0 ? Math.round(totalProgress / taskCount) : 0;
             document.getElementById('global-progress').innerHTML = `
-                <span class="text-xs text-gray-500 block">Avancement Global</span>
-                <span class="text-2xl font-bold text-blue-600">${globalAvg}%</span>
+                <span class="text-gray-400 block text-[10px] uppercase font-mono">Préparation Globale</span>
+                <span class="text-sm font-extrabold text-[#3fb950] font-mono">${globalAvg}%</span>
             `;
         }
 
-        // Initialisation au chargement
+        function renderGantt() {
+            const container = document.getElementById('gantt-content');
+            
+            let allDates = [];
+            projectData.forEach(s => s.tasks.forEach(t => {
+                if(t.start) allDates.push(new Date(t.start));
+                if(t.end) allDates.push(new Date(t.end));
+            }));
+
+            if(allDates.length === 0) {
+                container.innerHTML = "<p class='text-xs text-gray-400'>Aucune tâche planifiée dans le calendrier paddock.</p>";
+                return;
+            }
+
+            let minDate = new Date(Math.min.apply(null, allDates));
+            let maxDate = new Date(Math.max.apply(null, allDates));
+            let totalDays = Math.max(1, Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24))) + 5;
+
+            container.innerHTML = projectData.map(section => `
+                <div class="border-b gh-border pb-5">
+                    <h3 class="text-xs font-extrabold text-gray-300 uppercase tracking-wider mb-3 bg-[#21262d] p-2.5 rounded-md flex items-center gap-2">
+                        <span>🏁</span> ${section.rubrique}
+                    </h3>
+                    <div class="space-y-3">
+                        ${section.tasks.map(task => {
+                            let tStart = new Date(task.start);
+                            let tEnd = new Date(task.end);
+                            let offsetDays = Math.max(0, Math.floor((tStart - minDate) / (1000 * 60 * 60 * 24)));
+                            let durationDays = Math.max(1, Math.ceil((tEnd - tStart) / (1000 * 60 * 60 * 24)));
+
+                            let leftPercent = (offsetDays / totalDays) * 100;
+                            let widthPercent = Math.min(100 - leftPercent, (durationDays / totalDays) * 100);
+
+                            return `
+                                <div class="grid grid-cols-1 md:grid-cols-4 items-center text-xs gap-3">
+                                    <div class="font-medium text-gray-200 truncate" title="${task.name}">${task.name} <span class="text-[10px] text-gray-400">(${task.assignee || 'N/A'})</span></div>
+                                    <div class="md:col-span-3 bg-[#0d1117] rounded-md h-7 relative overflow-hidden border gh-border flex items-center shadow-inner">
+                                        <div class="absolute h-full bg-[#238636]/30 border border-[#238636] rounded-sm flex items-center justify-between px-3 text-[11px] font-bold text-[#3fb950]" 
+                                             style="left: ${leftPercent}%; width: max(12%, ${widthPercent}%);">
+                                            <span class="truncate">${task.progress}%</span>
+                                            <span class="text-[10px] text-gray-300 font-mono hidden sm:inline">${task.start} $\rightarrow$ ${task.end}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
         updateAuthUI();
-        renderProject();
     </script>
 </body>
 </html>
